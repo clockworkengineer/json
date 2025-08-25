@@ -466,4 +466,52 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_float_conversion() {
+        let num = Number::from(64.5);
+        assert_eq!(num, Number::Float(64.5));
+    }
+
+    #[test]
+    fn test_uint64_conversion() {
+        let num = Number::from(64_u64);
+        assert_eq!(num, Number::UInteger(64));
+    }
+
+    #[test]
+    fn test_byte_conversion() {
+        let num = Number::from(64_u8);
+        assert_eq!(num, Number::Byte(64));
+    }
+
+    #[test]
+    fn test_int32_conversion() {
+        let num = Number::from(32_i32);
+        assert_eq!(num, Number::Int32(32));
+    }
+
+    #[test]
+    fn test_uint32_conversion() {
+        let num = Number::from(32_u32);
+        assert_eq!(num, Number::UInt32(32));
+    }
+
+    #[test]
+    fn test_int16_conversion() {
+        let num = Number::from(16_i16);
+        assert_eq!(num, Number::Int16(16));
+    }
+
+    #[test]
+    fn test_uint16_conversion() {
+        let num = Number::from(16_u16);
+        assert_eq!(num, Number::UInt16(16));
+    }
+
+    #[test]
+    fn test_int8_conversion() {
+        let num = Number::from(8_i8);
+        assert_eq!(num, Number::Int8(8));
+    }
 }
