@@ -15,7 +15,7 @@ pub enum Number {
 /// A node in the JSON data structure that can represent different types of values.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
-    /// Represents a 64-bit signed integer value
+    /// Represents a numeric value
     Boolean(bool),
     /// Represents a boolean value
     Number(Number),
