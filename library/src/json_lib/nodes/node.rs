@@ -1,17 +1,29 @@
 use std::collections::HashMap;
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Number {
+    Integer(i64),
+    Float(f64),
+    UInteger(u64),
+    Byte(u8),
+    Int32(i32),
+    UInt32(u32),
+    Int16(i16),
+    UInt16(u16),
+    Int8(i8),
+}
 /// A node in the JSON data structure that can represent different types of values.
 #[derive(Clone, Debug, PartialEq)]
 pub enum Node {
     /// Represents a 64-bit signed integer value
     Boolean(bool),
     /// Represents a boolean value
-    Integer(i64),
+    Number(Number),
     /// Represents a string value
     Str(String),
     /// Represents a array of other nodes
     Array(Vec<Node>),
-    /// Represents a dictionary/map of string keys to node values
+    /// Represents a object/map of string keys to node values
     Object(HashMap<String, Node>),
     /// Represents an empty or uninitialized node
     None,
@@ -25,9 +37,63 @@ impl<T: Into<Node>> From<Vec<T>> for Node {
 }
 
 /// Converts an integer into an Integer node
+impl From<i64> for Number {
+    fn from(value: i64) -> Self {
+        Number::Integer(value)
+    }
+}
+
+impl From<f64> for Number {
+    fn from(value: f64) -> Self {
+        Number::Float(value)
+    }
+}
+
+impl From<u64> for Number {
+    fn from(value: u64) -> Self {
+        Number::UInteger(value)
+    }
+}
+
+impl From<u8> for Number {
+    fn from(value: u8) -> Self {
+        Number::Byte(value)
+    }
+}
+
+impl From<i32> for Number {
+    fn from(value: i32) -> Self {
+        Number::Int32(value)
+    }
+}
+
+impl From<u32> for Number {
+    fn from(value: u32) -> Self {
+        Number::UInt32(value)
+    }
+}
+
+impl From<i16> for Number {
+    fn from(value: i16) -> Self {
+        Number::Int16(value)
+    }
+}
+
+impl From<u16> for Number {
+    fn from(value: u16) -> Self {
+        Number::UInt16(value)
+    }
+}
+
+impl From<i8> for Number {
+    fn from(value: i8) -> Self {
+        Number::Int8(value)
+    }
+}
+
 impl From<i64> for Node {
     fn from(value: i64) -> Self {
-        Node::Integer(value)
+        Node::Number(Number::Integer(value))
     }
 }
 
@@ -51,7 +117,7 @@ impl From<bool> for Node {
     }
 }
 
-/// Converts a HashMap into a Dictionary node
+/// Converts a HashMap into a object node
 impl From<HashMap<String, Node>> for Node {
     fn from(value: HashMap<String, Node>) -> Self {
         Node::Object(value)
@@ -68,7 +134,7 @@ where
     }
 }
 
-// Allow creating a Dictionary node from a static array of key-value pairs.
+// Allow creating a object node from a static array of key-value pairs.
 // e.g., Node::from([("a", 1), ("b", 2)])
 impl<K, V, const N: usize> From<[(K, V); N]> for Node
 where
@@ -94,15 +160,15 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::{make_node, Node};
+    use super::{make_node, Node, Number};
     use std::collections::HashMap;
 
     #[test]
     fn create_integer_works() {
-        let variant = Node::Integer(32);
+        let variant = Node::Number(Number::Int32(32));
         match variant {
-            Node::Integer(integer) => {
-                assert_eq!(integer, 32);
+            Node::Number(integer) => {
+                assert_eq!(integer, Number::Int32(32));
             }
             _ => {
                 assert_eq!(false, true);
@@ -138,11 +204,11 @@ mod tests {
         let variant = Node::Array(Vec::<Node>::new());
         match variant {
             Node::Array(mut array) => {
-                array.push(Node::Integer(32));
+                array.push(Node::Number(Number::Int32(32)));
                 assert_eq!(array.len(), 1);
-                match array[0] {
-                    Node::Integer(integer) => {
-                        assert_eq!(integer, 32);
+                match &array[0] {
+                    Node::Number(integer) => {
+                        assert_eq!(integer, &Number::Int32(32));
                     }
                     _ => {
                         assert_eq!(false, true);
@@ -159,15 +225,15 @@ mod tests {
         let variant = Node::Array(Vec::<Node>::new());
         match variant {
             Node::Array(mut array) => {
-                array.push(Node::Integer(32));
-                array.push(Node::Integer(33));
-                array.push(Node::Integer(34));
-                array.push(Node::Integer(35));
-                array.push(Node::Integer(36));
+                array.push(Node::Number(Number::Int32(32)));
+                array.push(Node::Number(Number::Int32(33)));
+                array.push(Node::Number(Number::Int32(34)));
+                array.push(Node::Number(Number::Int32(35)));
+                array.push(Node::Number(Number::Int32(36)));
                 assert_eq!(array.len(), 5);
-                match array[4] {
-                    Node::Integer(integer) => {
-                        assert_eq!(integer, 36);
+                match &array[4] {
+                    Node::Number(integer) => {
+                        assert_eq!(*integer, Number::Int32(36));
                     }
                     _ => {
                         assert_eq!(false, true);
@@ -180,11 +246,11 @@ mod tests {
         }
     }
     #[test]
-    fn create_dictionary_works() {
+    fn create_object_works() {
         let variant = Node::Object(HashMap::new());
         match variant {
-            Node::Object(dictionary) => {
-                assert_eq!(dictionary.is_empty(), true);
+            Node::Object(object) => {
+                assert_eq!(object.is_empty(), true);
             }
             _ => {
                 assert_eq!(false, true);
@@ -192,15 +258,15 @@ mod tests {
         }
     }
     #[test]
-    fn add_to_dictionary_works() {
+    fn add_to_object_works() {
         let variant = Node::Object(HashMap::new());
         match variant {
-            Node::Object(mut dictionary) => {
-                dictionary.insert(String::from("test"), Node::Integer(32));
-                assert_eq!(dictionary.len(), 1);
-                match dictionary["test"] {
-                    Node::Integer(integer) => {
-                        assert_eq!(integer, 32);
+            Node::Object(mut object) => {
+                object.insert(String::from("test"), Node::Number(Number::Int32(32)));
+                assert_eq!(object.len(), 1);
+                match &object["test"] {
+                    Node::Number(integer) => {
+                        assert_eq!(integer, &Number::Int32(32));
                     }
                     _ => {
                         assert_eq!(false, true);
@@ -213,19 +279,19 @@ mod tests {
         }
     }
     #[test]
-    fn add_multiple_to_dictionary_works() {
+    fn add_multiple_to_object_works() {
         let variant = Node::Object(HashMap::new());
         match variant {
-            Node::Object(mut dictionary) => {
-                dictionary.insert(String::from("test1"), Node::Integer(32));
-                dictionary.insert(String::from("test2"), Node::Integer(33));
-                dictionary.insert(String::from("test3"), Node::Integer(34));
-                dictionary.insert(String::from("test4"), Node::Integer(35));
-                dictionary.insert(String::from("test5"), Node::Integer(36));
-                assert_eq!(dictionary.len(), 5);
-                match dictionary["test5"] {
-                    Node::Integer(integer) => {
-                        assert_eq!(integer, 36);
+            Node::Object(mut object) => {
+                object.insert(String::from("test1"), Node::Number(Number::Int32(32)));
+                object.insert(String::from("test2"), Node::Number(Number::Int32(33)));
+                object.insert(String::from("test3"), Node::Number(Number::Int32(34)));
+                object.insert(String::from("test4"), Node::Number(Number::Int32(35)));
+                object.insert(String::from("test5"), Node::Number(Number::Int32(36)));
+                assert_eq!(object.len(), 5);
+                match &object["test5"] {
+                    Node::Number(integer) => {
+                        assert_eq!(*integer, Number::Int32(36));
                     }
                     _ => {
                         assert_eq!(false, true);
@@ -241,8 +307,8 @@ mod tests {
     fn make_an_integer_node_works() {
         let node = make_node(32);
         match node {
-            Node::Integer(integer) => {
-                assert_eq!(integer, 32);
+            Node::Number(integer) => {
+                assert_eq!(integer, Number::Integer(32));
             }
             _ => {
                 assert_eq!(false, true);
@@ -274,11 +340,11 @@ mod tests {
         }
     }
     #[test]
-    fn make_a_dictionary_node_works() {
+    fn make_a_object_node_works() {
         let node = make_node(HashMap::<String, Node>::new());
         match node {
-            Node::Object(dictionary) => {
-                assert_eq!(dictionary.is_empty(), true);
+            Node::Object(object) => {
+                assert_eq!(object.is_empty(), true);
             }
             _ => {
                 assert_eq!(false, true);
@@ -295,7 +361,7 @@ mod tests {
 
                 for item in array {
                     match item {
-                        Node::Integer(_) => (),
+                        Node::Number(_) => (),
                         _ => assert_eq!(false, true),
                     }
                 }
@@ -306,7 +372,7 @@ mod tests {
 
     #[test]
     fn mixed_array_literal_to_array_node_works() {
-        let node = Node::from([Node::Integer(1), Node::Str("x".to_string()), Node::Integer(3)]);
+        let node = Node::from([Node::Number(Number::Int32(1)), Node::Str("x".to_string()), Node::Number(Number::Int32(3))]);
         match node {
             Node::Array(array) => {
                 assert_eq!(array.len(), 3);
@@ -316,13 +382,13 @@ mod tests {
     }
 
     #[test]
-    fn array_literal_to_dictionary_node_works() {
+    fn array_literal_to_object_node_works() {
         let node = make_node([("a", 1), ("b", 2)]);
         match node {
             Node::Object(map) => {
                 assert_eq!(map.len(), 2);
                 match map.get("b").unwrap() {
-                    Node::Integer(i) => assert_eq!(*i, 2),
+                    Node::Number(i) => assert_eq!(*i, Number::Integer(2)),
                     _ => assert_eq!(false, true),
                 }
             }
@@ -340,16 +406,16 @@ mod tests {
     }
 
     #[test]
-    fn mixed_dictionary_from_array_works() {
+    fn mixed_object_from_array_works() {
         let node = Node::from([
-            ("int", Node::Integer(1)),
+            ("int", Node::Number(Number::Int32(1))),
             ("str", Node::Str("test".to_string())),
             ("array", Node::Array(Vec::<Node>::new())),
         ]);
         match node {
             Node::Object(map) => {
                 assert_eq!(map.len(), 3);
-                assert!(matches!(map.get("int"), Some(Node::Integer(1))));
+                assert!(matches!(map.get("int"), Some(Node::Number(_))));
                 assert!(matches!(map.get("str"), Some(Node::Str(_))));
                 assert!(matches!(map.get("array"), Some(Node::Array(_))));
             }
