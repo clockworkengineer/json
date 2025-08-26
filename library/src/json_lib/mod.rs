@@ -1,5 +1,5 @@
 pub mod io;
 pub mod nodes;
-mod parser;
+pub mod parser;
 pub mod error;
-mod stringification;
+pub mod stringification;
