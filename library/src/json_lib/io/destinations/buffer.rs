@@ -1,5 +1,5 @@
 use crate::json_lib::io::traits::IDestination;
-/// A memory buffer implementation for storing encoded bencode data as bytes.
+/// A memory buffer implementation for storing encoded JSON data as bytes.
 /// Provides functionality to write and manipulate byte content in memory.
 pub struct Buffer {
     /// Internal vector storing the raw bytes

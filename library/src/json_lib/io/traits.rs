@@ -1,4 +1,4 @@
-/// Trait defining the interface for reading and traversing bencode data from a source.
+/// Trait defining the interface for reading and traversing JSON data from a source.
 /// Provides basic operations for sequential character-based reading.
 pub trait ISource {
     /// Advances the reading position to the next character.
@@ -11,7 +11,7 @@ pub trait ISource {
     fn reset(&mut self);
 }
 
-/// Trait defining the interface for writing bencode data to a destination.
+/// Trait defining the interface for writing JSON data to a destination.
 /// Provides operations for writing and managing byte content.
 pub trait IDestination {
     /// Adds a single byte to the destination.

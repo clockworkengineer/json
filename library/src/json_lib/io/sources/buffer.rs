@@ -1,6 +1,6 @@
 use crate::json_lib::io::traits::ISource;
 
-/// A memory buffer implementation for reading bencode data from bytes.
+/// A memory buffer implementation for reading JSON data from bytes.
 /// Provides functionality to traverse and read byte content from memory.
 pub struct Buffer {
     /// Internal vector storing the raw bytes
