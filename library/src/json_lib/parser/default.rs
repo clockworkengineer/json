@@ -1,5 +1,5 @@
 use crate::json_lib::nodes::node::Node;
-use crate::json_lib::nodes::node::Number;
+use crate::json_lib::nodes::node::Numeric;
 use std::collections::HashMap;
 use crate::json_lib::io::traits::ISource;
 use crate::json_lib::error::messages::*;
@@ -190,12 +190,12 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
 
     if is_float {
         match num_str.parse::<f64>() {
-            Ok(n) => Ok(Node::Number(Number::Float(n))),
+            Ok(n) => Ok(Node::Number(Numeric::Float(n))),
             Err(_) => Err(ERR_INVALID_FLOAT.to_string())
         }
     } else {
         match num_str.parse::<i64>() {
-            Ok(n) => Ok(Node::Number(Number::Integer(n))),
+            Ok(n) => Ok(Node::Number(Numeric::Integer(n))),
             Err(_) => Err(ERR_INVALID_INTEGER.to_string())
         }
     }
@@ -272,13 +272,13 @@ mod tests {
     #[test]
     fn test_parse_number_integer() {
         let mut source = Buffer::new(b"123");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Number::Integer(123)))));
+        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Integer(123)))));
     }
 
     #[test]
     fn test_parse_number_float() {
         let mut source = Buffer::new(b"123.45");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Number::Float(n))) if (n - 123.45).abs() < f64::EPSILON));
+        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 123.45).abs() < f64::EPSILON));
     }
 
     #[test]

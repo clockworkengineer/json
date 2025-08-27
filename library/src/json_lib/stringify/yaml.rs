@@ -10,12 +10,12 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
         Node::None => destination.add_bytes("null"),
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
         Node::Number(value) => match value {
-            Number::Integer(n) => destination.add_bytes(&n.to_string()),
-            Number::UInteger(n) => destination.add_bytes(&n.to_string()),
-            Number::Float(f) => destination.add_bytes(&f.to_string()),
-            Number::Byte(b) => destination.add_bytes(&b.to_string()),
-            Number::Int32(i) => destination.add_bytes(&i.to_string()),
-            Number::UInt32(u) => destination.add_bytes(&u.to_string()),
+            Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
+            Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
+            Numeric::Float(f) => destination.add_bytes(&f.to_string()),
+            Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
+            Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
+            Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("{:?}", value)),
         },
@@ -88,12 +88,12 @@ mod tests {
     fn test_stringify_numbers() {
         let mut dest = Buffer::new();
         let test_cases = vec![
-            (Node::Number(Number::Integer(-42)), "-42"),
-            (Node::Number(Number::UInteger(42)), "42"),
-            (Node::Number(Number::Float(42.5)), "42.5"),
-            (Node::Number(Number::Byte(255)), "255"),
-            (Node::Number(Number::Int32(-2147483648)), "-2147483648"),
-            (Node::Number(Number::UInt32(4294967295)), "4294967295"),
+            (Node::Number(Numeric::Integer(-42)), "-42"),
+            (Node::Number(Numeric::UInteger(42)), "42"),
+            (Node::Number(Numeric::Float(42.5)), "42.5"),
+            (Node::Number(Numeric::Byte(255)), "255"),
+            (Node::Number(Numeric::Int32(-2147483648)), "-2147483648"),
+            (Node::Number(Numeric::UInt32(4294967295)), "4294967295"),
         ];
         for (node, expected) in test_cases {
             dest.clear();
@@ -125,7 +125,7 @@ mod tests {
 
         dest.clear();
         stringify(&Node::Array(vec![
-            Node::Number(Number::Integer(1)),
+            Node::Number(Numeric::Integer(1)),
             Node::Str("test".to_string()),
         ]), &mut dest);
         assert_eq!(dest.to_string(), "\n- 1\n- test\n");

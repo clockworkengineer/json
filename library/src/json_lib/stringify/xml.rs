@@ -25,12 +25,12 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
         Node::Number(value) => {
             destination.add_bytes("<number>");
             match value {
-                Number::Integer(n) => destination.add_bytes(&n.to_string()),
-                Number::UInteger(n) => destination.add_bytes(&n.to_string()),
-                Number::Float(f) => destination.add_bytes(&f.to_string()),
-                Number::Byte(b) => destination.add_bytes(&b.to_string()),
-                Number::Int32(i) => destination.add_bytes(&i.to_string()),
-                Number::UInt32(u) => destination.add_bytes(&u.to_string()),
+                Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
+                Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
+                Numeric::Float(f) => destination.add_bytes(&f.to_string()),
+                Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
+                Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
+                Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
                 #[allow(unreachable_patterns)]
                 _ => destination.add_bytes(&format!("{:?}", value)),
             }
@@ -97,30 +97,30 @@ mod tests {
     #[test]
     fn test_stringify_number() {
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::Float(42.5)), &mut dest);
+        stringify(&Node::Number(Numeric::Float(42.5)), &mut dest);
         assert_eq!(dest.to_string(), "<number>42.5</number>");
     }
 
     #[test]
     fn test_stringify_all_numbers() {
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::Integer(-42)), &mut dest);
+        stringify(&Node::Number(Numeric::Integer(-42)), &mut dest);
         assert_eq!(dest.to_string(), "<number>-42</number>");
 
         dest = Buffer::new();
-        stringify(&Node::Number(Number::UInteger(42)), &mut dest);
+        stringify(&Node::Number(Numeric::UInteger(42)), &mut dest);
         assert_eq!(dest.to_string(), "<number>42</number>");
 
         dest = Buffer::new();
-        stringify(&Node::Number(Number::Byte(255)), &mut dest);
+        stringify(&Node::Number(Numeric::Byte(255)), &mut dest);
         assert_eq!(dest.to_string(), "<number>255</number>");
 
         dest = Buffer::new();
-        stringify(&Node::Number(Number::Int32(-2147483648)), &mut dest);
+        stringify(&Node::Number(Numeric::Int32(-2147483648)), &mut dest);
         assert_eq!(dest.to_string(), "<number>-2147483648</number>");
 
         dest = Buffer::new();
-        stringify(&Node::Number(Number::UInt32(4294967295)), &mut dest);
+        stringify(&Node::Number(Numeric::UInt32(4294967295)), &mut dest);
         assert_eq!(dest.to_string(), "<number>4294967295</number>");
     }
 
@@ -142,7 +142,7 @@ mod tests {
     fn test_stringify_array() {
         let mut dest = Buffer::new();
         stringify(&Node::Array(vec![
-            Node::Number(Number::Integer(1)),
+            Node::Number(Numeric::Integer(1)),
             Node::Str("test".to_string()),
         ]), &mut dest);
         assert_eq!(dest.to_string(), "<array><item><number>1</number></item><item><string>test</string></item></array>");
@@ -164,7 +164,7 @@ mod tests {
         inner_map.insert("inner".to_string(), Node::Array(vec![
             Node::Boolean(true),
             Node::None,
-            Node::Number(Number::Float(42.5))
+            Node::Number(Numeric::Float(42.5))
         ]));
         let mut outer_map = HashMap::new();
         outer_map.insert("outer<".to_string(), Node::Object(inner_map));

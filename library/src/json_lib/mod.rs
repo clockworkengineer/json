@@ -2,4 +2,4 @@ pub mod io;
 pub mod nodes;
 pub mod parser;
 pub mod error;
-pub mod stringification;
+pub mod stringify;

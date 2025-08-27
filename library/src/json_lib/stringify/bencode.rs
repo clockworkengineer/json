@@ -6,12 +6,12 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
         Node::None => destination.add_bytes(""),
         Node::Boolean(value) => destination.add_bytes(if *value { "i1e" } else { "i0e" }),
         Node::Number(value) => match value {
-            Number::Integer(n) => destination.add_bytes(&format!("i{}e", n)),
-            Number::UInteger(n) => destination.add_bytes(&format!("i{}e", n)),
-            Number::Float(f) => destination.add_bytes(&format!("i{}e", f.round() as i64)),
-            Number::Byte(b) => destination.add_bytes(&format!("i{}e", b)),
-            Number::Int32(i) => destination.add_bytes(&format!("i{}e", i)),
-            Number::UInt32(u) => destination.add_bytes(&format!("i{}e", u)),
+            Numeric::Integer(n) => destination.add_bytes(&format!("i{}e", n)),
+            Numeric::UInteger(n) => destination.add_bytes(&format!("i{}e", n)),
+            Numeric::Float(f) => destination.add_bytes(&format!("i{}e", f.round() as i64)),
+            Numeric::Byte(b) => destination.add_bytes(&format!("i{}e", b)),
+            Numeric::Int32(i) => destination.add_bytes(&format!("i{}e", i)),
+            Numeric::UInt32(u) => destination.add_bytes(&format!("i{}e", u)),
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("i{:?}e", value)),
         },
@@ -66,27 +66,27 @@ mod tests {
     #[test]
     fn test_stringify_numbers() {
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::Integer(-42)), &mut dest);
+        stringify(&Node::Number(Numeric::Integer(-42)), &mut dest);
         assert_eq!(dest.to_string(), "i-42e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::UInteger(42)), &mut dest);
+        stringify(&Node::Number(Numeric::UInteger(42)), &mut dest);
         assert_eq!(dest.to_string(), "i42e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::Float(42.7)), &mut dest);
+        stringify(&Node::Number(Numeric::Float(42.7)), &mut dest);
         assert_eq!(dest.to_string(), "i43e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::Byte(255)), &mut dest);
+        stringify(&Node::Number(Numeric::Byte(255)), &mut dest);
         assert_eq!(dest.to_string(), "i255e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::Int32(-2147483648)), &mut dest);
+        stringify(&Node::Number(Numeric::Int32(-2147483648)), &mut dest);
         assert_eq!(dest.to_string(), "i-2147483648e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Number::UInt32(4294967295)), &mut dest);
+        stringify(&Node::Number(Numeric::UInt32(4294967295)), &mut dest);
         assert_eq!(dest.to_string(), "i4294967295e");
     }
 
@@ -101,7 +101,7 @@ mod tests {
     fn test_stringify_array() {
         let mut dest = Buffer::new();
         stringify(&Node::Array(vec![
-            Node::Number(Number::Integer(1)),
+            Node::Number(Numeric::Integer(1)),
             Node::Str("test".to_string()),
         ]), &mut dest);
         assert_eq!(dest.to_string(), "li1e4:teste");
