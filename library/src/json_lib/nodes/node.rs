@@ -514,4 +514,31 @@ mod tests {
         let num = Numeric::from(8_i8);
         assert_eq!(num, Numeric::Int8(8));
     }
+
+    #[test]
+    fn complex_array_literal_to_array_node_works() {
+        let node = Node::from([
+            Node::from([1, 2, 3]),
+            Node::from([("x", 10), ("y", 20)]),
+            Node::Str("test".to_string())
+        ]);
+        match node {
+            Node::Array(array) => {
+                assert_eq!(array.len(), 3);
+                match &array[0] {
+                    Node::Array(inner_array) => assert_eq!(inner_array.len(), 3),
+                    _ => assert_eq!(false, true),
+                }
+                match &array[1] {
+                    Node::Object(obj) => assert_eq!(obj.len(), 2),
+                    _ => assert_eq!(false, true),
+                }
+                match &array[2] {
+                    Node::Str(s) => assert_eq!(s, "test"),
+                    _ => assert_eq!(false, true),
+                }
+            }
+            _ => assert_eq!(false, true),
+        }
+    }
 }
