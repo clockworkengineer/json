@@ -412,7 +412,7 @@ mod tests {
 
     #[test]
     fn test_parse_json_files() {
-        let files_dir = "files";
+        let files_dir = "../files";
         let json_files = get_json_file_paths(files_dir);
         for file_path in json_files {
             match FileSource::new(&file_path.to_string()) {
