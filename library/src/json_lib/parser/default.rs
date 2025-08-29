@@ -134,6 +134,29 @@ fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
                     Some('n') => s.push('\n'),
                     Some('r') => s.push('\r'),
                     Some('t') => s.push('\t'),
+                    Some('u') => {
+                        source.next();
+                        let mut hex = String::with_capacity(4);
+                        for _ in 0..4 {
+                            match source.current() {
+                                Some(d) if d.is_ascii_hexdigit() => {
+                                    hex.push(d);
+                                    source.next();
+                                }
+                                _ => return Err(ERR_INVALID_ESCAPE.to_string())
+                            }
+                        }
+                        if let Ok(code) = u32::from_str_radix(&hex, 16) {
+                            if let Some(ch) = char::from_u32(code) {
+                                s.push(ch);
+                            } else {
+                                return Err(ERR_INVALID_ESCAPE.to_string());
+                            }
+                        } else {
+                            return Err(ERR_INVALID_ESCAPE.to_string());
+                        }
+                        continue;
+                    }
                     _ => return Err(ERR_INVALID_ESCAPE.to_string())
                 }
                 source.next();
@@ -238,6 +261,8 @@ fn parse_null(source: &mut dyn ISource) -> Result<Node, String> {
 mod tests {
     use super::*;
     use crate::json_lib::io::sources::buffer::Buffer;
+    use std::fs;
+    use crate::FileSource;
 
     #[test]
     fn test_parse_null() {
@@ -343,4 +368,63 @@ mod tests {
             _ => panic!("Expected empty object")
         }
     }
+
+    #[test]
+    fn test_unicode_escape() {
+        let mut source = Buffer::new(b"\"\\u0048\\u0065\\u006c\\u006c\\u006f\"");
+        assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "Hello"));
+    }
+
+    #[test]
+    fn test_mixed_unicode_escape() {
+        let mut source = Buffer::new(b"\"Hello, \\u0057\\u006f\\u0072\\u006c\\u0064!\"");
+        assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "Hello, World!"));
+    }
+
+    #[test]
+    fn test_invalid_unicode_escape() {
+        let mut source = Buffer::new(b"\"\\u00\"");
+        assert!(parse(&mut source).is_err());
+    }
+
+    #[test]
+    fn test_invalid_unicode_hex() {
+        let mut source = Buffer::new(b"\"\\u00zz\"");
+        assert!(parse(&mut source).is_err());
+    }
+
+    fn get_json_file_paths(directory: &str) -> Vec<String> {
+        let mut paths = Vec::new();
+        if let Ok(entries) = fs::read_dir(directory) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    let path = entry.path();
+                    if path.extension().and_then(|s| s.to_str()) == Some("json") {
+                        if let Some(path_str) = path.to_str() {
+                            paths.push(path_str.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        paths
+    }
+
+    #[test]
+    fn test_parse_json_files() {
+        let files_dir = "files";
+        let json_files = get_json_file_paths(files_dir);
+        for file_path in json_files {
+            match FileSource::new(&file_path.to_string()) {
+                Ok(mut source) => {
+                    let result = parse(&mut source);
+                    assert!(result.is_ok(), "Failed to parse {}: {:?}", file_path, result.err());
+                },
+                Err(e) => panic!("Failed to open {}: {}", file_path, e),
+            }
+
+    
+        }
+    }
 }
+
