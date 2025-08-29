@@ -25,7 +25,7 @@ pub use json_lib::stringify::default::stringify as stringify;
 /// Parses json data into a Node tree structure
 pub use json_lib::parser::default::parse as parse;
 /// Converts a Node tree to JSON format
-pub use json_lib::stringify::default::stringify as to_json;
+pub use json_lib::stringify::bencode::stringify as to_bencode;
 /// Converts a Node tree to YAML format
 pub use json_lib::stringify::yaml::stringify as to_yaml;
 /// Converts a Node tree to XML format
