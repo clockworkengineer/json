@@ -5,11 +5,6 @@
 use std::fs;
 use std::path::Path;
 
-#[cfg(test)]
-use std::fs::File;
-#[cfg(test)]
-use std::io::Write;
-
 /// Returns a list of json file paths from the specified directory.
 ///
 /// # Arguments
