@@ -97,6 +97,12 @@ impl From<i64> for Node {
     }
 }
 
+impl From<i32> for Node {
+    fn from(value: i32) -> Self {
+        Node::Number(Numeric::Int32(value))
+    }
+}
+
 /// Converts a string slice into a Str node
 impl From<&str> for Node {
     fn from(value: &str) -> Self {
@@ -538,6 +544,68 @@ mod tests {
                     _ => assert_eq!(false, true),
                 }
             }
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_complex_literal_hashmap_to_dict_node_works() {
+        let node = Node::from([
+            ("array", Node::from([1, 2, 3])),
+            ("object", Node::from([("x", 10), ("y", 20)])),
+            ("string", Node::from("test")),
+            ("number", Node::from(42)),
+            ("boolean", Node::from(true)),
+            ("nested", Node::from([
+                ("inner_array", Node::from([4, 5, 6])),
+                ("inner_object", Node::from([("a", 1), ("b", 2)]))
+            ]))
+        ]);
+
+        match node {
+            Node::Object(map) => {
+                assert_eq!(map.len(), 6);
+
+                match map.get("array").unwrap() {
+                    Node::Array(arr) => assert_eq!(arr.len(), 3),
+                    _ => assert_eq!(false, true),
+                }
+
+                match map.get("object").unwrap() {
+                    Node::Object(obj) => assert_eq!(obj.len(), 2),
+                    _ => assert_eq!(false, true),
+                }
+
+                match map.get("string").unwrap() {
+                    Node::Str(s) => assert_eq!(s, "test"),
+                    _ => assert_eq!(false, true),
+                }
+
+                match map.get("number").unwrap() {
+                    Node::Number(_) => (),
+                    _ => assert_eq!(false, true),
+                }
+
+                match map.get("boolean").unwrap() {
+                    Node::Boolean(b) => assert_eq!(*b, true),
+                    _ => assert_eq!(false, true),
+                }
+
+                match map.get("nested").unwrap() {
+                    Node::Object(nested) => {
+                        assert_eq!(nested.len(), 2);
+                        match nested.get("inner_array").unwrap() {
+                            Node::Array(arr) => assert_eq!(arr.len(), 3),
+                            _ => assert_eq!(false, true),
+                        }
+                        match nested.get("inner_object").unwrap() {
+                            Node::Object(obj) => assert_eq!(obj.len(), 2),
+                            _ => assert_eq!(false, true),
+                        }
+                    },
+                    _ => assert_eq!(false, true),
+                }
+            },
             _ => assert_eq!(false, true),
         }
     }
