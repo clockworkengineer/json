@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::{Index, IndexMut};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Numeric {
@@ -21,7 +22,7 @@ pub enum Node {
     Number(Numeric),
     /// Represents a string value
     Str(String),
-    /// Represents a array of other nodes
+    /// Represents an array of other nodes
     Array(Vec<Node>),
     /// Represents a object/map of string keys to node values
     Object(HashMap<String, Node>),
@@ -29,7 +30,47 @@ pub enum Node {
     None,
 }
 
-/// Converts a vector of values into a array node
+impl Index<usize> for Node {
+    type Output = Node;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        match self {
+            Node::Array(arr) => &arr[index],
+            _ => panic!("Cannot index non-array node with integer"),
+        }
+    }
+}
+
+impl Index<&str> for Node {
+    type Output = Node;
+
+    fn index(&self, key: &str) -> &Self::Output {
+        match self {
+            Node::Object(map) => &map[key],
+            _ => panic!("Cannot index non-object node with string"),
+        }
+    }
+}
+
+impl IndexMut<usize> for Node {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        match self {
+            Node::Array(arr) => &mut arr[index],
+            _ => panic!("Cannot index non-array node with integer"),
+        }
+    }
+}
+
+impl IndexMut<&str> for Node {
+    fn index_mut(&mut self, key: &str) -> &mut Self::Output {
+        match self {
+            Node::Object(map) => map.get_mut(key).expect("No such key exists"),
+            _ => panic!("Cannot index non-object node with string"),
+        }
+    }
+}
+
+/// Converts a vector of values into an array node
 impl<T: Into<Node>> From<Vec<T>> for Node {
     fn from(value: Vec<T>) -> Self {
         Node::Array(value.into_iter().map(|x| x.into()).collect())
@@ -130,7 +171,7 @@ impl From<HashMap<String, Node>> for Node {
     }
 }
 
-// Allow creating a array node from a static array literal, e.g., Node::from([1, 2, 3])
+// Allow creating an array node from a static array literal, e.g., Node::from([1, 2, 3])
 impl<T, const N: usize> From<[T; N]> for Node
 where
     T: Into<Node>,
@@ -140,7 +181,7 @@ where
     }
 }
 
-// Allow creating a object node from a static array of key-value pairs.
+// Allow creating an object node from a static array of key-value pairs.
 // e.g., Node::from([("a", 1), ("b", 2)])
 impl<K, V, const N: usize> From<[(K, V); N]> for Node
 where
@@ -522,6 +563,62 @@ mod tests {
     }
 
     #[test]
+    fn test_float_node_conversion() {
+        let node = Node::Number(Numeric::Float(64.5));
+        match node {
+            Node::Number(num) => assert_eq!(num, Numeric::Float(64.5)),
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_mixed_numeric_array() {
+        let node = Node::from([
+            Node::Number(Numeric::Int32(1)),
+            Node::Number(Numeric::Float(2.5)),
+            Node::Number(Numeric::UInteger(3)),
+            Node::Number(Numeric::Byte(4)),
+        ]);
+        match node {
+            Node::Array(array) => assert_eq!(array.len(), 4),
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_node_from_node() {
+        let original = Node::Number(Numeric::Int32(42));
+        let node: Node = original.clone().into();
+        assert_eq!(node, original);
+    }
+
+    #[test]
+    fn test_nested_numeric_array() {
+        let node = Node::from([
+            Node::from([
+                Node::Number(Numeric::Int16(1)),
+                Node::Number(Numeric::UInt16(2)),
+                Node::Number(Numeric::Int8(3))
+            ]),
+            Node::from([
+                Node::Number(Numeric::UInt32(4)),
+                Node::Number(Numeric::Integer(5)),
+                Node::Number(Numeric::Float(6.0))
+            ])
+        ]);
+        match node {
+            Node::Array(array) => {
+                assert_eq!(array.len(), 2);
+                match &array[0] {
+                    Node::Array(inner) => assert_eq!(inner.len(), 3),
+                    _ => assert_eq!(false, true),
+                }
+            },
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
     fn complex_array_literal_to_array_node_works() {
         let node = Node::from([
             Node::from([1, 2, 3]),
@@ -544,6 +641,44 @@ mod tests {
                     _ => assert_eq!(false, true),
                 }
             }
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_array_indexing() {
+        let array_node = Node::from([1, 2, 3]);
+        match &array_node[0] {
+            Node::Number(num) => assert_eq!(*num, Numeric::Int32(1)),
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_object_key_indexing() {
+        let object_node = Node::from([("test", 42)]);
+        match &object_node["test"] {
+            Node::Number(num) => assert_eq!(*num, Numeric::Int32(42)),
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_mutable_array_indexing() {
+        let mut array_node = Node::from([1, 2, 3]);
+        array_node[1] = Node::Number(Numeric::Int32(42));
+        match &array_node[1] {
+            Node::Number(num) => assert_eq!(*num, Numeric::Int32(42)),
+            _ => assert_eq!(false, true),
+        }
+    }
+
+    #[test]
+    fn test_mutable_object_indexing() {
+        let mut object_node = Node::from([("test", 1)]);
+        object_node["test"] = Node::Number(Numeric::Int32(42));
+        match &object_node["test"] {
+            Node::Number(num) => assert_eq!(*num, Numeric::Int32(42)),
             _ => assert_eq!(false, true),
         }
     }
@@ -609,4 +744,5 @@ mod tests {
             _ => assert_eq!(false, true),
         }
     }
+    
 }

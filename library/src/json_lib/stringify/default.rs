@@ -158,4 +158,25 @@ mod tests {
         stringify(&array, &mut dest);
         assert_eq!(dest.to_string(), "[-42,42,42.42,255,-2147483648,4294967295]");
     }
+
+    #[test]
+    fn test_stringify_empty_array() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Array(vec![]), &mut dest);
+        assert_eq!(dest.to_string(), "[]");
+    }
+
+    #[test]
+    fn test_stringify_empty_object() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(HashMap::new()), &mut dest);
+        assert_eq!(dest.to_string(), "{}");
+    }
+
+    #[test]
+    fn test_stringify_control_chars() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("\u{0000}\u{001F}".to_string()), &mut dest);
+        assert_eq!(dest.to_string(), "\"\\u0000\\u001f\"");
+    }
 }

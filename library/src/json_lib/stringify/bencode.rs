@@ -105,6 +105,10 @@ mod tests {
             Node::Str("test".to_string()),
         ]), &mut dest);
         assert_eq!(dest.to_string(), "li1e4:teste");
+
+        let mut dest = Buffer::new();
+        stringify(&Node::Array(vec![]), &mut dest);
+        assert_eq!(dest.to_string(), "le");
     }
 
     #[test]
@@ -115,5 +119,29 @@ mod tests {
         map.insert("a".to_string(), Node::Str("value2".to_string()));
         stringify(&Node::Object(map), &mut dest);
         assert_eq!(dest.to_string(), "d1:a6:value21:b6:value1e");
+
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(HashMap::new()), &mut dest);
+        assert_eq!(dest.to_string(), "de");
     }
+
+    #[test]
+    fn test_stringify_empty_string() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("".to_string()), &mut dest);
+        assert_eq!(dest.to_string(), "0:");
+    }
+
+    #[test]
+    fn test_stringify_nested_empty() {
+        let mut dest = Buffer::new();
+        let  inner_map = HashMap::new();
+        let mut outer_map = HashMap::new();
+        outer_map.insert("empty_object".to_string(), Node::Object(inner_map));
+        outer_map.insert("empty_array".to_string(), Node::Array(vec![]));
+        outer_map.insert("empty_string".to_string(), Node::Str("".to_string()));
+        stringify(&Node::Object(outer_map), &mut dest);
+        assert_eq!(dest.to_string(), "d11:empty_arrayle12:empty_objectde12:empty_string0:e");
+    }
+    
 }

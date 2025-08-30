@@ -171,4 +171,42 @@ mod tests {
         stringify(&Node::Object(outer_map), &mut dest);
         assert_eq!(dest.to_string(), "<object><entry><key>outer&lt;</key><value><object><entry><key>inner</key><value><array><item><boolean>true</boolean></item><item><null/></item><item><number>42.5</number></item></array></value></entry></object></value></entry></object>");
     }
+
+    #[test]
+    fn test_stringify_empty_array() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Array(vec![]), &mut dest);
+        assert_eq!(dest.to_string(), "<array></array>");
+    }
+
+    #[test]
+    fn test_stringify_empty_object() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(HashMap::new()), &mut dest);
+        assert_eq!(dest.to_string(), "<object></object>");
+    }
+
+    #[test]
+    fn test_stringify_unicode_string() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("Hello 🦀 World".to_string()), &mut dest);
+        assert_eq!(dest.to_string(), "<string>Hello 🦀 World</string>");
+    }
+
+    #[test]
+    fn test_stringify_large_numbers() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Float(f64::MAX)), &mut dest);
+        assert_eq!(dest.to_string(), format!("<number>{}</number>", f64::MAX));
+    }
+
+    // #[test]
+    // fn test_stringify_nested_empty_structures() {
+    //     let mut dest = Buffer::new();
+    //     let mut map = HashMap::new();
+    //     map.insert("empty_array".to_string(), Node::Array(vec![]));
+    //     map.insert("empty_object".to_string(), Node::Object(HashMap::new()));
+    //     stringify(&Node::Object(map), &mut dest);
+    //     assert_eq!(dest.to_string(), "<object><entry><key>empty_array</key><value><array></array></value></entry><entry><key>empty_object</key><value><object></object></value></entry></object>");
+    // }
 }

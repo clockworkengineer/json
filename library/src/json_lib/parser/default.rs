@@ -426,5 +426,54 @@ mod tests {
     
         }
     }
+
+    #[test]
+    fn test_parse_negative_number() {
+        let mut source = Buffer::new(b"-123");
+        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Integer(-123)))));
+
+        let mut source = Buffer::new(b"-123.45");
+        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - -123.45).abs() < f64::EPSILON));
+    }
+
+    #[test]
+    fn test_parse_scientific_notation() {
+        let mut source = Buffer::new(b"1.23e+2");
+        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 123.0).abs() < f64::EPSILON));
+
+        let mut source = Buffer::new(b"1.23E-2");
+        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 0.0123).abs() < f64::EPSILON));
+    }
+
+    #[test]
+    fn test_parse_complex_object() {
+        let mut source = Buffer::new(b"{\"array\":[1,{\"nested\":true},null],\"string\":\"value\"}");
+        match parse(&mut source) {
+            Ok(Node::Object(obj)) => {
+                assert_eq!(obj.len(), 2);
+                assert!(obj.contains_key("array"));
+                assert!(obj.contains_key("string"));
+            },
+            _ => panic!("Expected complex object")
+        }
+    }
+
+    #[test]
+    fn test_invalid_syntax() {
+        let mut source = Buffer::new(b"{\"key\": value}");
+        assert!(parse(&mut source).is_err());
+
+        let mut source = Buffer::new(b"[1,2,]");
+        assert!(parse(&mut source).is_err());
+
+        let mut source = Buffer::new(b"{,}");
+        assert!(parse(&mut source).is_err());
+    }
+
+    #[test]
+    fn test_string_escapes() {
+        let mut source = Buffer::new(b"\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"");
+        assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "\"\\/\x08\x0c\n\r\t"));
+    }
 }
 
