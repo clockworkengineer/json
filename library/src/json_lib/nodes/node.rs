@@ -314,7 +314,7 @@ mod tests {
         let node = make_node(32);
         match node {
             Node::Number(integer) => {
-                assert_eq!(integer, Numeric::Integer(32));
+                assert_eq!(integer, Numeric::Int32(32));
             }
             _ => {
                 assert_eq!(false, true);
@@ -394,7 +394,7 @@ mod tests {
             Node::Object(map) => {
                 assert_eq!(map.len(), 2);
                 match map.get("b").unwrap() {
-                    Node::Number(i) => assert_eq!(*i, Numeric::Integer(2)),
+                    Node::Number(i) => assert_eq!(*i, Numeric::Int32(2)),
                     _ => assert_eq!(false, true),
                 }
             }
