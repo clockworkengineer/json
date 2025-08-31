@@ -7,6 +7,8 @@ pub mod json_lib;
 // /// Writes json-encoded data to a file on disk
 // pub use json_lib::misc::write_json_file as write_file;
 
+pub use json_lib::file::file::detect_format;
+
 /// Source implementation for reading JSON data from a memory buffer
 pub use json_lib::io::sources::buffer::Buffer as BufferSource;
 /// Destination implementation for writing JSON data to a memory buffer
