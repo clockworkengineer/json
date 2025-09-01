@@ -10,6 +10,19 @@ pub enum Format {
     Utf32be,
 }
 
+impl Format {
+    fn get_bom(&self) -> &'static [u8] {
+        match self {
+            Format::Utf8 => &[],
+            Format::Utf8bom => &[0xEF, 0xBB, 0xBF],
+            Format::Utf16le => &[0xFF, 0xFE],
+            Format::Utf16be => &[0xFE, 0xFF],
+            Format::Utf32le => &[0xFF, 0xFE, 0x00, 0x00],
+            Format::Utf32be => &[0x00, 0x00, 0xFE, 0xFF],
+        }
+    }
+}
+
 pub fn detect_format(filename: &str) -> Result<Format> {
     let mut file = File::open(filename)?;
     let mut bom_buffer = [0u8; 4];
@@ -25,6 +38,43 @@ pub fn detect_format(filename: &str) -> Result<Format> {
     };
 
     Ok(format)
+}
+
+pub fn write_file_from_string(filename: &str, content: &str, format: Format) -> Result<()> {
+    let mut file = File::create(filename)?;
+    file.write_all(format.get_bom())?;
+
+    match format {
+        Format::Utf8 | Format::Utf8bom => {
+            file.write_all(format.get_bom())?;
+            file.write_all(content.as_bytes())?;
+        }
+        Format::Utf16le => {
+            file.write_all(format.get_bom())?;
+            for c in content.encode_utf16() {
+                file.write_all(&c.to_le_bytes())?;
+            }
+        }
+        Format::Utf16be => {
+            file.write_all(format.get_bom())?;
+            for c in content.encode_utf16() {
+                file.write_all(&c.to_be_bytes())?;
+            }
+        }
+        Format::Utf32le => {
+            file.write_all(format.get_bom())?;
+            for c in content.chars() {
+                file.write_all(&(c as u32).to_le_bytes())?;
+            }
+        }
+        Format::Utf32be => {
+            file.write_all(format.get_bom())?;
+            for c in content.chars() {
+                file.write_all(&(c as u32).to_be_bytes())?;
+            }
+        }
+    }
+    Ok(())
 }
 
 pub fn read_file_to_string(filename: &str) -> Result<String> {
