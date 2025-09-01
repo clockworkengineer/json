@@ -278,7 +278,7 @@ mod tests {
         let test_content = "Test UTF-8 BOM content";
         write_file_from_string("test_write_utf8bom.txt", test_content, Format::Utf8bom)?;
         assert_eq!(read_file_to_string("test_write_utf8bom.txt")?, test_content);
-        // fs::remove_file("test_write_utf8bom.txt")?;
+        fs::remove_file("test_write_utf8bom.txt")?;
         Ok(())
     }
 
