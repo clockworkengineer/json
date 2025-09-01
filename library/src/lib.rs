@@ -2,12 +2,11 @@ pub mod json_lib;
 
 /// Returns the current version of the JSON library
 // pub use json_lib::misc::get_version as version;
-// /// Reads and parses a json-encoded file from disk
-// pub use json_lib::misc::read_json_file as read_file;
-// /// Writes json-encoded data to a file on disk
-// pub use json_lib::misc::write_json_file as write_file;
 
-pub use json_lib::file::file::detect_format;
+pub use json_lib::file::file::Format as Format;
+pub use json_lib::file::file::detect_format as detect_format;
+pub use json_lib::file::file::read_file_to_string as read_file_to_string;
+pub use json_lib::file::file::write_file_from_string as write_file_from_string;
 
 /// Source implementation for reading JSON data from a memory buffer
 pub use json_lib::io::sources::buffer::Buffer as BufferSource;
