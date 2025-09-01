@@ -87,6 +87,8 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
             file.read_exact(&mut buf)?;
         }
         Format::Utf16be => {
+            let mut buf = [0u8; 2];
+            file.read_exact(&mut buf)?;
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes)?;
             content = String::from_utf16(
@@ -97,6 +99,8 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
             return Ok(content.replace("\r\n", "\n"));
         }
         Format::Utf16le => {
+            let mut buf = [0u8; 2];
+            file.read_exact(&mut buf)?;
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes)?;
             content = String::from_utf16(
@@ -107,6 +111,8 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
             return Ok(content.replace("\r\n", "\n"));
         }
         Format::Utf32be => {
+            let mut buf = [0u8; 4];
+            file.read_exact(&mut buf)?;
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes)?;
             let code_points = bytes.chunks(4)
@@ -118,6 +124,8 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
             return Ok(content.replace("\r\n", "\n"));
         }
         Format::Utf32le => {
+            let mut buf = [0u8; 4];
+            file.read_exact(&mut buf)?;
             let mut bytes = Vec::new();
             file.read_to_end(&mut bytes)?;
             let code_points = bytes.chunks(4)
@@ -193,5 +201,76 @@ mod tests {
         assert!(matches!(detect_format("test_utf32be.txt")?, Format::Utf32be));
         fs::remove_file("test_utf32be.txt")?;
         Ok(())
+    }
+
+    #[test]
+    fn test_formatted_testfile021() -> Result<()> {
+        assert!(matches!(detect_format("../files/formatted/testfile021.json")?, Format::Utf8));
+        Ok(())
+    }
+    #[test]
+    fn test_formatted_testfile022() -> Result<()> {
+        assert!(matches!(detect_format("../files/formatted/testfile022.json")?, Format::Utf8bom));
+        Ok(())
+    }
+
+    #[test]
+    fn test_formatted_testfile023() -> Result<()> {
+        assert!(matches!(detect_format("../files/formatted/testfile023.json")?, Format::Utf16be));
+        Ok(())
+    }
+
+    #[test]
+    fn test_formatted_testfile024() -> Result<()> {
+        assert!(matches!(detect_format("../files/formatted/testfile024.json")?, Format::Utf16le));
+        Ok(())
+    }
+
+    #[test]
+    fn test_formatted_testfile025() -> Result<()> {
+        assert!(matches!(detect_format("../files/formatted/testfile025.json")?, Format::Utf32be));
+        Ok(())
+    }
+
+    #[test]
+    fn test_formatted_testfile026() -> Result<()> {
+        assert!(matches!(detect_format("../files/formatted/testfile026.json")?, Format::Utf32le));
+        Ok(())
+    }
+
+    fn verify_file_content(filename: &str, expected: &str) -> Result<()> {
+        let content = read_file_to_string(filename)?;
+        assert_eq!(content, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn test_read_utf8_file() -> Result<()> {
+        verify_file_content("../files/formatted/testfile021.json", "[true  , \"Out of time\",  7.89043e+18, true]")
+    }
+
+    #[test]
+    fn test_read_utf8bom_file() -> Result<()> {
+        verify_file_content("../files/formatted/testfile022.json", "[true  , \"Out of time\",  7.89043e+18, true]")
+    }
+
+    #[test]
+    fn test_read_utf16be_file() -> Result<()> {
+        verify_file_content("../files/formatted/testfile023.json", "[true  , \"Out of time\",  7.89043e+18, true]")
+    }
+
+    #[test]
+    fn test_read_utf16le_file() -> Result<()> {
+        verify_file_content("../files/formatted/testfile024.json", "[true  , \"Out of time\",  7.89043e+18, true]")
+    }
+
+    #[test]
+    fn test_read_utf32be_file() -> Result<()> {
+        verify_file_content("../files/formatted/testfile025.json", "[true  , \"Out of time\",  7.89043e+18, true]")
+    }
+
+    #[test]
+    fn test_read_utf32le_file() -> Result<()> {
+        verify_file_content("../files/formatted/testfile026.json", "[true  , \"Out of time\",  7.89043e+18, true]")
     }
 }
