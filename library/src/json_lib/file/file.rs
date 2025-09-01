@@ -81,66 +81,61 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
     let mut content = String::new();
     let format = detect_format(filename)?;
     let mut file = File::open(filename)?;
+
+    fn read_and_skip_bom(file: &mut File, size: usize) -> Result<()> {
+        let mut buf = vec![0u8; size];
+        file.read_exact(&mut buf)
+    }
+
+    fn process_utf16(file: &mut File, is_be: bool) -> Result<String> {
+        read_and_skip_bom(file, 2)?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+
+        let content = String::from_utf16(
+            &bytes.chunks(2)
+                .map(|chunk| if is_be {
+                    u16::from_be_bytes([chunk[0], chunk[1]])
+                } else {
+                    u16::from_le_bytes([chunk[0], chunk[1]])
+                })
+                .collect::<Vec<u16>>()
+        ).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+
+        Ok(content.replace("\r\n", "\n"))
+    }
+
+    fn process_utf32(file: &mut File, is_be: bool) -> Result<String> {
+        read_and_skip_bom(file, 4)?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes)?;
+
+        let content = bytes.chunks(4)
+            .map(|chunk| if is_be {
+                u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]])
+            } else {
+                u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]])
+            })
+            .map(|cp| char::from_u32(cp).unwrap_or('\u{FFFD}'))
+            .collect::<String>();
+
+        Ok(content.replace("\r\n", "\n"))
+    }
+
     match format {
         Format::Utf8bom => {
-            let mut buf = [0u8; 3];
-            file.read_exact(&mut buf)?;
+            read_and_skip_bom(&mut file, 3)?;
+            file.read_to_string(&mut content)?;
         }
-        Format::Utf16be => {
-            let mut buf = [0u8; 2];
-            file.read_exact(&mut buf)?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes)?;
-            content = String::from_utf16(
-                &bytes.chunks(2)
-                    .map(|chunk| u16::from_be_bytes([chunk[0], chunk[1]]))
-                    .collect::<Vec<u16>>()
-            ).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-            return Ok(content.replace("\r\n", "\n"));
+        Format::Utf16be => return process_utf16(&mut file, true),
+        Format::Utf16le => return process_utf16(&mut file, false),
+        Format::Utf32be => return process_utf32(&mut file, true),
+        Format::Utf32le => return process_utf32(&mut file, false),
+        Format::Utf8 => {
+            file.read_to_string(&mut content)?;
         }
-        Format::Utf16le => {
-            let mut buf = [0u8; 2];
-            file.read_exact(&mut buf)?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes)?;
-            content = String::from_utf16(
-                &bytes.chunks(2)
-                    .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
-                    .collect::<Vec<u16>>()
-            ).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
-            return Ok(content.replace("\r\n", "\n"));
-        }
-        Format::Utf32be => {
-            let mut buf = [0u8; 4];
-            file.read_exact(&mut buf)?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes)?;
-            let code_points = bytes.chunks(4)
-                .map(|chunk| u32::from_be_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-                .collect::<Vec<u32>>();
-            content = code_points.into_iter()
-                .map(|cp| char::from_u32(cp).unwrap_or('\u{FFFD}'))
-                .collect::<String>();
-            return Ok(content.replace("\r\n", "\n"));
-        }
-        Format::Utf32le => {
-            let mut buf = [0u8; 4];
-            file.read_exact(&mut buf)?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes)?;
-            let code_points = bytes.chunks(4)
-                .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-                .collect::<Vec<u32>>();
-            content = code_points.into_iter()
-                .map(|cp| char::from_u32(cp).unwrap_or('\u{FFFD}'))
-                .collect::<String>();
-            return Ok(content.replace("\r\n", "\n"));
-        }
-        Format::Utf8 => {}
     }
-    file.read_to_string(&mut content)?;
 
-    // Convert CRLF to LF
     Ok(content.replace("\r\n", "\n"))
 }
 
