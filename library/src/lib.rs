@@ -1,7 +1,7 @@
 pub mod json_lib;
 
 /// Returns the current version of the JSON library
-// pub use json_lib::misc::get_version as version;
+pub use json_lib::misc::get_version as version;
 
 pub use json_lib::file::file::Format as Format;
 pub use json_lib::file::file::detect_format as detect_format;
