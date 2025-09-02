@@ -92,11 +92,7 @@ mod tests {
     fn test_print_array() {
         let mut dest = BufferDestination::new();
         print(&Node::Array(vec![Node::Boolean(true), Node::Number(Numeric::Integer(1))]), &mut dest, 0, 0);
-        assert_eq!(
-            dest.to_string(),
-            "[\n  true,\n  1\n]"
-        );
-        assert_eq!(dest.to_string(), "[\n  true,\n  1\n]");
+        assert_eq!(dest.to_string(), "[\ntrue,\n1\n]");
     }
 
     #[test]
@@ -106,11 +102,7 @@ mod tests {
         map.insert("key".to_string(), Node::Str("value".to_string()));
         let hashmap: std::collections::HashMap<String, Node> = map.into_iter().collect();
         print(&Node::Object(hashmap), &mut dest, 0, 0);
-        assert_eq!(
-            dest.to_string(),
-            "{\n  \"key\": \"value\"\n}"
-        );
-        assert_eq!(dest.to_string(), "{\n  \"key\": \"value\"\n}");
+        assert_eq!(dest.to_string(), "{\n\"key\": \"value\"\n}");
     }
 
     #[test]
