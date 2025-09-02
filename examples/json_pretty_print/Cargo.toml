@@ -1,0 +1,8 @@
+[package]
+name = "json_pretty_print"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+json_lib= { path =  "../../library/" }
+json_utility_lib= { path = "../json_utility_lib" }

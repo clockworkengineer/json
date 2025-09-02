@@ -681,7 +681,7 @@ mod tests {
             Node::Number(num) => assert_eq!(*num, Numeric::Int32(42)),
             _ => assert_eq!(false, true),
         }
-    }
+    } 
 
     #[test]
     fn test_complex_literal_hashmap_to_dict_node_works() {
