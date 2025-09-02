@@ -1,14 +1,31 @@
+//! YAML string conversion module for Node structures
+//! Provides functionality to convert Node types into YAML formatted strings
+
 use crate::json_lib::nodes::node::*;
 use crate::json_lib::io::traits::IDestination;
 
+/// Converts a Node into a YAML formatted string and writes it to the destination
+///
+/// # Arguments
+/// * `node` - The Node to convert
+/// * `destination` - The output destination implementing IDestination
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     stringify_with_indent(node, destination, 0);
 }
 
+/// Converts a Node into a YAML formatted string with proper indentation
+///
+/// # Arguments
+/// * `node` - The Node to convert
+/// * `destination` - The output destination implementing IDestination
+/// * `indent` - Current indentation level in spaces
 fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent: usize) {
     match node {
+        // Handle null values
         Node::None => destination.add_bytes("null"),
+        // Handle boolean values
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
+        // Handle different numeric types
         Node::Number(value) => match value {
             Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
             Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
@@ -19,6 +36,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("{:?}", value)),
         },
+        // Handle string values with special treatment for multi-line and quoted strings
         Node::Str(value) => {
             if value.contains('\n') || value.contains('"') {
                 destination.add_bytes("|\n");
@@ -31,6 +49,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
                 destination.add_bytes(value);
             }
         },
+        // Handle arrays with proper YAML list formatting
         Node::Array(items) => {
             if items.is_empty() {
                 destination.add_bytes("[]");
@@ -44,6 +63,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
                 destination.add_bytes("\n");
             }
         },
+        // Handle objects/maps with proper YAML mapping formatting
         Node::Object(entries) => {
             if entries.is_empty() {
                 destination.add_bytes("{}");
@@ -62,6 +82,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
 }
 
 #[cfg(test)]
+/// Tests for YAML stringification functionality
 mod tests {
     use super::*;
     use std::collections::HashMap;

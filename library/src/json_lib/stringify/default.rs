@@ -6,12 +6,19 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
         Node::None => destination.add_bytes("null"),
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
         Node::Number(value) => match value {
+            // Handles signed integer values
             Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
+            // Handles unsigned integer values
             Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
+            // Handles floating point numbers
             Numeric::Float(f) => destination.add_bytes(&f.to_string()),
+            // Handles 8-bit unsigned values (0-255)
             Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
+            // Handles 32-bit signed integers (-2^31 to 2^31-1)
             Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
+            // Handles 32-bit unsigned integers (0 to 2^32-1)
             Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
+            // Fallback for any future numeric variants
             // If there are any other variants, add them here
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("{:?}", value)),

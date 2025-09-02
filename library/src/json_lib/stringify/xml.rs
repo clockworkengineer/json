@@ -1,6 +1,14 @@
+//! XML serialization module for JSON nodes
+//! Provides functionality to convert JSON nodes into XML format
+
 use crate::json_lib::nodes::node::*;
 use crate::json_lib::io::traits::IDestination;
 
+/// Escapes special XML characters in a string and writes them to the destination
+///
+/// # Arguments
+/// * `s` - The string to escape
+/// * `destination` - The output destination implementing IDestination
 fn escape_xml_string(s: &str, destination: &mut dyn IDestination) {
     for c in s.chars() {
         match c {
@@ -14,14 +22,22 @@ fn escape_xml_string(s: &str, destination: &mut dyn IDestination) {
     }
 }
 
+/// Converts a JSON node to XML format and writes it to the destination
+///
+/// # Arguments
+/// * `node` - The JSON node to convert
+/// * `destination` - The output destination implementing IDestination
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     match node {
+        // Handle null values with self-closing tag
         Node::None => destination.add_bytes("<null/>"),
+        // Convert boolean values to XML with explicit true/false content
         Node::Boolean(value) => {
             destination.add_bytes("<boolean>");
             destination.add_bytes(if *value { "true" } else { "false" });
             destination.add_bytes("</boolean>");
         }
+        // Convert numeric values to XML with type-specific handling
         Node::Number(value) => {
             destination.add_bytes("<number>");
             match value {
@@ -36,11 +52,13 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
             }
             destination.add_bytes("</number>");
         }
+        // Convert string values to XML with proper escaping
         Node::Str(value) => {
             destination.add_bytes("<string>");
             escape_xml_string(value, destination);
             destination.add_bytes("</string>");
         }
+        // Convert arrays to XML with item wrapping for each element
         Node::Array(items) => {
             destination.add_bytes("<array>");
             for item in items {
@@ -50,6 +68,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
             }
             destination.add_bytes("</array>");
         }
+        // Convert objects to XML with entry elements containing key-value pairs
         Node::Object(entries) => {
             destination.add_bytes("<object>");
             for (key, value) in entries {

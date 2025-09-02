@@ -1,3 +1,6 @@
+//! Miscellaneous utility functions for JSON processing
+//! Contains functionality for version information and formatted JSON printing
+
 use crate::json_lib::io::traits::IDestination;
 use crate::Node;
 use crate::json_lib::nodes::node::Numeric;
@@ -8,9 +11,18 @@ use crate::json_lib::nodes::node::Numeric;
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
+/// Prints a JSON node to the specified destination with formatting
+///
+/// # Arguments
+/// * `node` - The JSON node to print
+/// * `destination` - The output destination implementing IDestination
+/// * `indent` - Number of spaces to use for each indentation level
+/// * `current_indent` - Current indentation level in spaces
 pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, current_indent: usize) {
     match node {
+        // Handle boolean values (true/false)
         Node::Boolean(value) => destination.add_bytes(&value.to_string()),
+        // Handle various numeric types
         Node::Number(value) => match value {
             Numeric::Integer(i) => destination.add_bytes(&i.to_string()),
             Numeric::UInteger(u) => destination.add_bytes(&u.to_string()),
@@ -22,8 +34,11 @@ pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, cur
             Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
             Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
         },
+        // Handle string values with proper JSON escaping
         Node::Str(value) => destination.add_bytes(&format!("\"{}\"", value)),
+        // Handle null values
         Node::None => destination.add_bytes("null"),
+        // Handle arrays with proper indentation and formatting
         Node::Array(array) => {
             destination.add_bytes("[\n");
             for (i, item) in array.iter().enumerate() {
@@ -37,6 +52,7 @@ pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, cur
             destination.add_bytes(&" ".repeat(current_indent));
             destination.add_bytes("]");
         }
+        // Handle objects/maps with proper indentation and key-value formatting
         Node::Object(map) => {
             destination.add_bytes("{\n");
             for (i, (key, value)) in map.iter().enumerate() {

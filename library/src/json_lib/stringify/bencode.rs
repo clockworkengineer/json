@@ -1,6 +1,21 @@
+//! Implementation of bencode serialization format.
+//! Bencode is the encoding used by the peer-to-peer file sharing system BitTorrent
+//! for storing and transmitting loosely structured data.
+
 use crate::json_lib::nodes::node::*;
 use crate::json_lib::io::traits::IDestination;
 
+/// Converts a Node into its bencode string representation and writes it to the destination.
+///
+/// # Arguments
+/// * `node` - The Node to serialize
+/// * `destination` - The output destination implementing IDestination trait
+///
+/// The bencode format specifies the following encoding rules:
+/// - Strings are encoded as <length>:<contents>
+/// - Integers are encoded as i<number>e
+/// - Lists are encoded as l<bencoded elements>e
+/// - Dictionaries are encoded as d<bencoded strings><bencoded elements>e
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     match node {
         Node::None => destination.add_bytes(""),
@@ -40,6 +55,8 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
 }
 
 #[cfg(test)]
+/// Test module for verifying bencode serialization functionality.
+/// Contains tests for all Node types and their bencode representations.
 mod tests {
     use super::*;
     use std::collections::HashMap;

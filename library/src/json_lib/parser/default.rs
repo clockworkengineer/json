@@ -1,9 +1,20 @@
+//! JSON parser implementation that converts JSON text into Node structures
+//! Provides functions for parsing different JSON data types including objects,
+//! arrays, strings, numbers, booleans, and null values.
+
 use crate::json_lib::nodes::node::Node;
 use crate::json_lib::nodes::node::Numeric;
 use std::collections::HashMap;
 use crate::json_lib::io::traits::ISource;
 use crate::json_lib::error::messages::*;
 
+/// Parses JSON input from a source and returns a Node representation
+///
+/// # Arguments
+/// * `source` - Source implementing ISource trait that provides JSON input
+///
+/// # Returns
+/// * `Result<Node, String>` - Parsed Node or error message if parsing fails
 pub fn parse(source: &mut dyn ISource) -> Result<Node, String> {
     skip_whitespace(source);
 
@@ -20,6 +31,10 @@ pub fn parse(source: &mut dyn ISource) -> Result<Node, String> {
     }
 }
 
+/// Advances the source past any whitespace characters
+///
+/// # Arguments
+/// * `source` - Source to read characters from
 fn skip_whitespace(source: &mut dyn ISource) {
     while let Some(c) = source.current() {
         if !c.is_whitespace() {
@@ -29,6 +44,14 @@ fn skip_whitespace(source: &mut dyn ISource) {
     }
 }
 
+/// Parses a JSON object starting with '{' and returns Node::Object
+/// Handles nested key-value pairs separated by commas
+///
+/// # Arguments
+/// * `source` - Source to read characters from
+///
+/// # Returns
+/// * `Result<Node, String>` - Object Node or error message
 fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
     let mut map = HashMap::new();
     source.next(); // Skip '{'
@@ -81,6 +104,14 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
     Ok(Node::Object(map))
 }
 
+/// Parses a JSON array starting with '[' and returns Node::Array
+/// Handles comma-separated values of any valid JSON type
+///
+/// # Arguments
+/// * `source` - Source to read characters from
+///
+/// # Returns
+/// * `Result<Node, String>` - Array Node or error message
 fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
     let mut vec = Vec::new();
     source.next(); // Skip '['
@@ -113,6 +144,14 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
     Ok(Node::Array(vec))
 }
 
+/// Parses a JSON string with support for escape sequences
+/// Handles standard escapes and unicode escape sequences
+///
+/// # Arguments
+/// * `source` - Source to read characters from
+///
+/// # Returns
+/// * `Result<Node, String>` - String Node or error message
 fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
     let mut s = String::new();
     source.next(); // Skip opening quote
@@ -171,6 +210,14 @@ fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
     Err(ERR_UNTERMINATED_STRING.to_string())
 }
 
+/// Parses JSON numbers including integers, floats and scientific notation
+/// Supports negative numbers and exponential notation
+///
+/// # Arguments
+/// * `source` - Source to read characters from
+///
+/// # Returns
+/// * `Result<Node, String>` - Number Node or error message
 fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
     let mut num_str = String::new();
     let mut is_float = false;
@@ -258,6 +305,8 @@ fn parse_null(source: &mut dyn ISource) -> Result<Node, String> {
 }
 
 #[cfg(test)]
+/// Test module for JSON parser functionality
+/// Includes tests for all JSON data types and error conditions
 mod tests {
     use super::*;
     use crate::json_lib::io::sources::buffer::Buffer;
@@ -423,7 +472,7 @@ mod tests {
                 Err(e) => panic!("Failed to open {}: {}", file_path, e),
             }
 
-    
+
         }
     }
 

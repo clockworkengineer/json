@@ -1,16 +1,18 @@
 use std::fs::File;
 use std::io::{Read, Result, Write};
 
+/// Represents different Unicode text file formats with their corresponding byte order marks (BOM)
 pub enum Format {
-    Utf8,
-    Utf8bom,
-    Utf16le,
-    Utf16be,
-    Utf32le,
-    Utf32be,
+    Utf8,        // UTF-8 without BOM
+    Utf8bom,     // UTF-8 with BOM (EF BB BF)
+    Utf16le,     // UTF-16 Little Endian (FF FE)
+    Utf16be,     // UTF-16 Big Endian (FE FF)
+    Utf32le,     // UTF-32 Little Endian (FF FE 00 00)
+    Utf32be,     // UTF-32 Big Endian (00 00 FE FF)
 }
 
 impl Format {
+    /// Returns the byte order mark (BOM) bytes for each format
     fn get_bom(&self) -> &'static [u8] {
         match self {
             Format::Utf8 => &[],
@@ -23,6 +25,7 @@ impl Format {
     }
 }
 
+/// Detects the Unicode format of a text file by examining its byte order mark (BOM)
 pub fn detect_format(filename: &str) -> Result<Format> {
     let mut file = File::open(filename)?;
     let mut bom_buffer = [0u8; 4];
@@ -40,6 +43,7 @@ pub fn detect_format(filename: &str) -> Result<Format> {
     Ok(format)
 }
 
+/// Writes a string to a file in the specified Unicode format
 pub fn write_file_from_string(filename: &str, content: &str, format: Format) -> Result<()> {
     let mut file = File::create(filename)?;
     file.write_all(format.get_bom())?;
@@ -72,16 +76,19 @@ pub fn write_file_from_string(filename: &str, content: &str, format: Format) -> 
     Ok(())
 }
 
+/// Reads a text file and returns its content as a String, handling different Unicode formats
 pub fn read_file_to_string(filename: &str) -> Result<String> {
     let mut content = String::new();
     let format = detect_format(filename)?;
     let mut file = File::open(filename)?;
 
+    /// Helper function to read and skip over the BOM bytes
     fn read_and_skip_bom(file: &mut File, size: usize) -> Result<()> {
         let mut buf = vec![0u8; size];
         file.read_exact(&mut buf)
     }
 
+    /// Helper function to process UTF-16 encoded files
     fn process_utf16(file: &mut File, is_be: bool) -> Result<String> {
         read_and_skip_bom(file, 2)?;
         let mut bytes = Vec::new();
@@ -100,6 +107,7 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
         Ok(content.replace("\r\n", "\n"))
     }
 
+    /// Helper function to process UTF-32 encoded files
     fn process_utf32(file: &mut File, is_be: bool) -> Result<String> {
         read_and_skip_bom(file, 4)?;
         let mut bytes = Vec::new();
@@ -138,6 +146,8 @@ pub fn read_file_to_string(filename: &str) -> Result<String> {
 mod tests {
     use super::*;
     use std::fs;
+
+    /// Creates a test file with the specified BOM and content
     fn create_test_file(filename: &str, bom: &[u8]) -> Result<()> {
         let mut file = File::create(filename)?;
         file.write_all(bom)?;
