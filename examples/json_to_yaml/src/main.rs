@@ -35,10 +35,10 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
 
 fn main() {
     // Get a list of all JSON files in the "files" directory
-    let torrent_files = get_json_file_list("files");
+    let json_files = get_json_file_list("files");
 
     // Process each JSON file in the list
-    for file_path in torrent_files {
+    for file_path in json_files {
         match process_json_file(&file_path) {
             // Print success or error message for each file
             Ok(()) => println!("Successfully converted {}", file_path),

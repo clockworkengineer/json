@@ -33,10 +33,10 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
 
 fn main() {
     // Get list of JSON files from the "files" directory
-    let torrent_files = get_json_file_list("files");
+    let json_files = get_json_file_list("files");
 
     // Process each JSON file and convert it to bencode format
-    for file_path in torrent_files {
+    for file_path in json_files {
         match process_json_file(&file_path) {
             Ok(()) => println!("Successfully converted {}", file_path),
             Err(e) => eprintln!("Failed to convert {}: {}", file_path, e),
