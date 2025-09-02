@@ -1,42 +1,45 @@
-
-//! Example demonstrating conversion of torrent files from json format to JSON format.
-//! Takes torrent files from the "files" directory and creates corresponding JSON files.
-
 use std::path::Path;
+// Import the necessary types and functions from json_lib and json_utility_lib
 use json_lib::{FileSource, parse, FileDestination, to_xml};
 use json_utility_lib::get_json_file_list;
 
-/// Converts a single torrent file from json format to xml format
+/// Processes a single JSON file by converting it to XML format.
 ///
 /// # Arguments
-/// * `file_path` - Path to the input torrent file
+/// * `file_path` - Path to the JSON file to be converted
 ///
 /// # Returns
-/// * `Ok(())` if conversion was successful
-/// * `Err(String)` containing the error message if conversion failed
+/// * `Result<(), String>` - Ok(()) if successful, Err with error message if failed
 fn process_json_file(file_path: &str) -> Result<(), String> {
-    // Create a source reader for the torrent file
+    // Create a new file source for reading JSON data
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;
-    // Parse the json data into an in-memory node structure
+
+    // Parse the JSON content into a Node structure
     let node = parse(&mut source).map_err(|e| e.to_string())?;
-    // Create a destination writer for the JSON file with the same name but .json extension
-    let mut destination = FileDestination::new(Path::new(file_path).with_extension("xml").to_string_lossy().as_ref()).map_err(|e| e.to_string())?;
-    // Write the parsed data as JSON to the destination file
+
+    // Create a new file destination with .xml extension for the output
+    let mut destination = FileDestination::new(
+        Path::new(file_path)
+            .with_extension("xml")
+            .to_string_lossy()
+            .as_ref()
+    ).map_err(|e| e.to_string())?;
+
+    // Convert the parsed JSON node to XML format and write to destination
     to_xml(&node, &mut destination);
     Ok(())
 }
 
-/// Main function that processes all torrent files in the "files" directory
 fn main() {
-    // Get a list of torrent files from the "files" directory
+    // Get a list of all JSON files in the "files" directory
     let torrent_files = get_json_file_list("files");
-    // Process each torrent file
+
+    // Process each JSON file in the list
     for file_path in torrent_files {
+        // Attempt to convert each file and handle any errors
         match process_json_file(&file_path) {
             Ok(()) => println!("Successfully converted {}", file_path),
             Err(e) => eprintln!("Failed to convert {}: {}", file_path, e),
         }
     }
 }
-
-

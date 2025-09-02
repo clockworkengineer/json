@@ -1,36 +1,41 @@
-
-//! Example demonstrating conversion of torrent files from json format to JSON format.
-//! Takes torrent files from the "files" directory and creates corresponding JSON files.
-
 use std::path::Path;
+// Import the necessary parts from json_lib for file operations and parsing
 use json_lib::{FileSource, parse, FileDestination, to_bencode};
+// Import utility function to get list of JSON files
 use json_utility_lib::get_json_file_list;
 
-/// Converts a single torrent file from json format to bencode format
+/// Processes a single JSON file by converting it to bencode format
 ///
 /// # Arguments
-/// * `file_path` - Path to the input torrent file
+/// * `file_path` - Path to the JSON file to be processed
 ///
 /// # Returns
-/// * `Ok(())` if conversion was successful
-/// * `Err(String)` containing the error message if conversion failed
+/// * `Result<(), String>` - Ok(()) if successful, Err with error message if failed
 fn process_json_file(file_path: &str) -> Result<(), String> {
-    // Create a source reader for the torrent file
+    // Create a file source for reading JSON data
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;
-    // Parse the json data into an in-memory node structure
+
+    // Parse the JSON content into an abstract syntax tree
     let node = parse(&mut source).map_err(|e| e.to_string())?;
-    // Create a destination writer for the JSON file with the same name but .json extension
-    let mut destination = FileDestination::new(Path::new(file_path).with_extension("bencode").to_string_lossy().as_ref()).map_err(|e| e.to_string())?;
-    // Write the parsed data as JSON to the destination file
+
+    // Create a destination file with .bencode extension for output
+    let mut destination = FileDestination::new(
+        Path::new(file_path)
+            .with_extension("bencode")
+            .to_string_lossy()
+            .as_ref()
+    ).map_err(|e| e.to_string())?;
+
+    // Convert and write the parsed JSON to bencode format
     to_bencode(&node, &mut destination);
     Ok(())
 }
 
-/// Main function that processes all torrent files in the "files" directory
 fn main() {
-    // Get a list of torrent files from the "files" directory
+    // Get list of JSON files from the "files" directory
     let torrent_files = get_json_file_list("files");
-    // Process each torrent file
+
+    // Process each JSON file and convert it to bencode format
     for file_path in torrent_files {
         match process_json_file(&file_path) {
             Ok(()) => println!("Successfully converted {}", file_path),
@@ -38,4 +43,3 @@ fn main() {
         }
     }
 }
-

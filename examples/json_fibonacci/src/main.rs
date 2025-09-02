@@ -1,15 +1,15 @@
-//! Fibonacci sequence generator using json format for storage.
-//! This program maintains a sequence of Fibonacci numbers in a json file,
+//! Fibonacci sequence generator using JSON format for storage.
+//! This program maintains a sequence of Fibonacci numbers in a JSON file,
 //! reading the existing sequence and appending the next number on each run.
 
 use json_lib::{FileDestination, FileSource, Node, parse, stringify, Numeric};
 use std::path::Path;
 
-/// Reads a Fibonacci sequence from a json-encoded file.
+/// Reads a Fibonacci sequence from a JSON-encoded file.
 /// If the file doesn't exist, initializes a new sequence starting with [1, 1].
 ///
 /// # Arguments
-/// * `file_path` - Path to the json file containing the sequence
+/// * `file_path` - Path to the JSON file containing the sequence
 ///
 /// # Returns
 /// * `Ok(Node)` - A Node::List containing the sequence
@@ -55,7 +55,7 @@ fn add_next(sequence: &mut Node) {
 
 }
 
-/// Saves the Fibonacci sequence to a json-encoded file.
+/// Saves the Fibonacci sequence to a JSON-encoded file.
 ///
 /// # Arguments
 /// * `file_path` - Path where to save the sequence

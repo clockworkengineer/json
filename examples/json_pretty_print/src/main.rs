@@ -1,37 +1,43 @@
-
-//! Example demonstrating conversion of torrent files from json format to JSON format.
-//! Takes torrent files from the "files" directory and creates corresponding JSON files.
-
 use std::path::Path;
-use json_lib::{FileSource, parse, FileDestination, to_bencode};
+// Import required functionality from json_lib and json_utility_lib
+use json_lib::{FileSource, parse, FileDestination};  // Removed unused 'to_bencode' import
 use json_lib::json_lib::misc::print;
 use json_utility_lib::get_json_file_list;
 
-/// Converts a single torrent file from json format to bencode format
+/// Processes a single JSON file by reading, parsing, and pretty-printing it
 ///
 /// # Arguments
-/// * `file_path` - Path to the input torrent file
+///
+/// * `file_path` - Path to the input JSON file
 ///
 /// # Returns
-/// * `Ok(())` if conversion was successful
-/// * `Err(String)` containing the error message if conversion failed
+///
+/// * `Result<(), String>` - Ok(()) on success, Err with error message on failure
 fn process_json_file(file_path: &str) -> Result<(), String> {
-    // Create a source reader for the torrent file
+    // Create a source reader for the JSON file
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;
-    // Parse the json data into an in-memory node structure
+
+    // Parse the JSON data into an in-memory node structure
     let node = parse(&mut source).map_err(|e| e.to_string())?;
-    // Create a destination writer for the JSON file with the same name but .json extension
-    let mut destination = FileDestination::new(Path::new(file_path).with_extension("json_pp").to_string_lossy().as_ref()).map_err(|e| e.to_string())?;
-    // Write the parsed data as JSON to the destination file
+
+    // Create a destination file with "_pp" suffix for pretty-printed output
+    let mut destination = FileDestination::new(
+        Path::new(file_path)
+            .with_extension("json_pp")
+            .to_string_lossy()
+            .as_ref()
+    ).map_err(|e| e.to_string())?;
+
+    // Pretty print the JSON with 4-space indentation
     print(&node, &mut destination, 4, 0);
     Ok(())
 }
 
-/// Main function that processes all torrent files in the "files" directory
 fn main() {
-    // Get a list of torrent files from the "files" directory
+    // Get list of JSON files from the "files" directory
     let torrent_files = get_json_file_list("files");
-    // Process each torrent file
+
+    // Process each JSON file
     for file_path in torrent_files {
         match process_json_file(&file_path) {
             Ok(()) => println!("Successfully converted {}", file_path),
@@ -39,5 +45,3 @@ fn main() {
         }
     }
 }
-
-
