@@ -23,7 +23,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
     // Create a destination writer for the JSON file with the same name but .json extension
     let mut destination = FileDestination::new(Path::new(file_path).with_extension("json_pp").to_string_lossy().as_ref()).map_err(|e| e.to_string())?;
     // Write the parsed data as JSON to the destination file
-    print(&node, &mut destination, 4);
+    print(&node, &mut destination, 4, 0);
     Ok(())
 }
 
