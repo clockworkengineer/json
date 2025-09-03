@@ -1,6 +1,6 @@
 
-//! Utility library for handling json files and related operations.
-//! Provides functionality for file system operations specific to json files.
+//! Utility library for handling JSON files and related operations.
+//! Provides functionality for file system operations specific to JSON files.
 
 use std::fs;
 use std::path::Path;
@@ -30,7 +30,7 @@ pub fn get_json_file_list(file_path: &str) -> Vec<String> {
             // Extract entry and convert to the path
             let entry = entry.ok()?;
             let file_path = entry.path();
-            // Check if the file has .json extension
+            // Check if the file has a.json extension
             if file_path.extension()? == "json" {
                 Some(file_path.to_string_lossy().into_owned())
             } else {

@@ -1,7 +1,5 @@
 use std::path::Path;
-// Import the necessary parts from json_lib for file operations and parsing
 use json_lib::{FileSource, parse, FileDestination, to_bencode};
-// Import utility function to get list of JSON files
 use json_utility_lib::get_json_file_list;
 
 /// Processes a single JSON file by converting it to bencode format
@@ -10,7 +8,7 @@ use json_utility_lib::get_json_file_list;
 /// * `file_path` - Path to the JSON file to be processed
 ///
 /// # Returns
-/// * `Result<(), String>` - Ok(()) if successful, Err with error message if failed
+/// * `Result<(), String>` - Ok(()) if successful, Err with an error message if failed
 fn process_json_file(file_path: &str) -> Result<(), String> {
     // Create a file source for reading JSON data
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;
@@ -32,7 +30,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
 }
 
 fn main() {
-    // Get list of JSON files from the "files" directory
+    // Get a list of JSON files from the "files" directory
     let json_files = get_json_file_list("files");
 
     // Process each JSON file and convert it to bencode format

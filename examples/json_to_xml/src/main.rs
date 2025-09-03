@@ -9,7 +9,7 @@ use json_utility_lib::get_json_file_list;
 /// * `file_path` - Path to the JSON file to be converted
 ///
 /// # Returns
-/// * `Result<(), String>` - Ok(()) if successful, Err with error message if failed
+/// * `Result<(), String>` - Ok(()) if successful, Err with an error message if failed
 fn process_json_file(file_path: &str) -> Result<(), String> {
     // Create a new file source for reading JSON data
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;

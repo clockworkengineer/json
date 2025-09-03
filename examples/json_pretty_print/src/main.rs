@@ -1,6 +1,5 @@
 use std::path::Path;
-// Import required functionality from json_lib and json_utility_lib
-use json_lib::{FileSource, parse, FileDestination};  // Removed unused 'to_bencode' import
+use json_lib::{FileSource, parse, FileDestination}; 
 use json_lib::json_lib::misc::print;
 use json_utility_lib::get_json_file_list;
 
@@ -12,7 +11,7 @@ use json_utility_lib::get_json_file_list;
 ///
 /// # Returns
 ///
-/// * `Result<(), String>` - Ok(()) on success, Err with error message on failure
+/// * `Result<(), String>` - Ok(()) on success, Err with an error message on failure
 fn process_json_file(file_path: &str) -> Result<(), String> {
     // Create a source reader for the JSON file
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;
@@ -34,7 +33,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
 }
 
 fn main() {
-    // Get list of JSON files from the "files" directory
+    // Get a list of JSON files from the "files" directory
     let json_files = get_json_file_list("files");
 
     // Process each JSON file

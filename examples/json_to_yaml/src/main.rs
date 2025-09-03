@@ -11,7 +11,7 @@ use json_utility_lib::get_json_file_list;
 ///
 /// # Returns
 ///
-/// * `Result<(), String>` - Ok(()) on successful conversion, Err with error message on failure
+/// * `Result<(), String>` - Ok(()) on successful conversion, Err with an error message on failure
 fn process_json_file(file_path: &str) -> Result<(), String> {
     // Create a file source for reading JSON data
     let mut source = FileSource::new(file_path).map_err(|e| e.to_string())?;
@@ -40,7 +40,7 @@ fn main() {
     // Process each JSON file in the list
     for file_path in json_files {
         match process_json_file(&file_path) {
-            // Print success or error message for each file
+            // Print a success or error message for each file
             Ok(()) => println!("Successfully converted {}", file_path),
             Err(e) => eprintln!("Failed to convert {}: {}", file_path, e),
         }
