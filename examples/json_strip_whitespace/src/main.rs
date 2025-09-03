@@ -1,7 +1,5 @@
 use std::path::Path;
-// Import required functionality from json_lib and json_utility_lib
-use json_lib::{FileSource, parse, FileDestination, strip_whitespace};  // Removed unused 'to_bencode' import
-use json_lib::json_lib::misc::print;
+use json_lib::{FileSource, FileDestination, strip_whitespace};
 use json_utility_lib::get_json_file_list;
 
 /// Processes a single JSON file by reading, parsing, and pretty-printing it
