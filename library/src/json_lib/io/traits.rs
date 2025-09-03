@@ -9,6 +9,9 @@ pub trait ISource {
     fn more(&mut self) -> bool;
     /// Resets the reading position to the beginning of the source.
     fn reset(&mut self);
+    fn is_whitespace(&self, c: char) -> bool {
+        c == ' ' || c == '\t' || c == '\n' || c == '\r'
+    }
 }
 
 /// Trait defining the interface for writing JSON data to a destination.
