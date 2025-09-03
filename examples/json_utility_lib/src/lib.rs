@@ -5,11 +5,11 @@
 use std::fs;
 use std::path::Path;
 
-/// Returns a list of json file paths from the specified directory.
+/// Returns a list of JSON file paths from the specified directory.
 ///
 /// # Arguments
 ///
-/// * `file_path` - Path to the directory containing json files
+/// * `file_path` - Path to the directory containing JSON files
 ///
 /// # Returns
 ///
