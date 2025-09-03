@@ -80,7 +80,7 @@ pub fn strip(source: &mut dyn ISource, destination: &mut dyn IDestination) {
             if !(c == ' ' || c == '\t' || c == '\n' || c == '\r') {
                 destination.add_byte(c as u8);
 
-                // Handle string literals specially to preserve their whitespace
+                // Handle string literals especially to preserve their whitespace
                 if source.current() == Some('"') {
                     source.next();
                     // Copy characters until closing quote
