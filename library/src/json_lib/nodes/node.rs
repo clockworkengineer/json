@@ -109,7 +109,7 @@ impl From<i64> for Node {
 
 // ... [remaining Node implementations]
 
-/// Helper function to create a Node from any value that can be converted into a Node
+/// Helper functions to create a Node from any value that can be converted into a Node
 pub fn make_node<T>(value: T) -> Node
 where
     T: Into<Node>,

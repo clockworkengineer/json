@@ -145,7 +145,7 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
 }
 
 /// Parses a JSON string with support for escape sequences
-/// Handles standard escapes and unicode escape sequences
+/// Handles standard escapes and Unicode escape sequences
 ///
 /// # Arguments
 /// * `source` - Source to read characters from

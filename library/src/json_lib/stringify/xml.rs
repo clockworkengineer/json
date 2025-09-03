@@ -29,7 +29,7 @@ fn escape_xml_string(s: &str, destination: &mut dyn IDestination) {
 /// * `destination` - The output destination implementing IDestination
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     match node {
-        // Handle null values with self-closing tag
+        // Handle null values with a self-closing tag
         Node::None => destination.add_bytes("<null/>"),
         // Convert boolean values to XML with explicit true/false content
         Node::Boolean(value) => {

@@ -12,10 +12,10 @@ use crate::json_lib::io::traits::IDestination;
 /// * `destination` - The output destination implementing IDestination trait
 ///
 /// The bencode format specifies the following encoding rules:
-/// - Strings are encoded as <length>:<contents>
+/// - Strings are encoded as <length>: <contents>
 /// - Integers are encoded as i<number>e
 /// - Lists are encoded as l<bencoded elements>e
-/// - Dictionaries are encoded as d<bencoded strings><bencoded elements>e
+/// - Dictionaries are encoded as d<bencoded strings> <bencoded elements>e
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     match node {
         Node::None => destination.add_bytes(""),

@@ -1,5 +1,5 @@
 //! Miscellaneous utility functions for JSON processing
-//! Contains functionality for version information and formatted JSON printing
+//! Contain functionality for version information and formatted JSON printing
 
 use crate::json_lib::io::traits::{IDestination, ISource};
 use crate::Node;
