@@ -1,7 +1,7 @@
 //! Miscellaneous utility functions for JSON processing
 //! Contains functionality for version information and formatted JSON printing
 
-use crate::json_lib::io::traits::IDestination;
+use crate::json_lib::io::traits::{IDestination, ISource};
 use crate::Node;
 use crate::json_lib::nodes::node::Numeric;
 
@@ -71,6 +71,36 @@ pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, cur
     }
 }
 
+/// Strips whitespace from JSON while preserving string content.
+/// Copies non-whitespace characters from source to destination, handling string literals specially.
+pub fn strip(source: &mut dyn ISource, destination: &mut dyn IDestination) {
+    while source.more() {
+        if let Some(c) = source.current() {
+            // Skip whitespace characters outside of strings
+            if !(c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                destination.add_byte(c as u8);
+
+                // Handle string literals specially to preserve their whitespace
+                if source.current() == Some('"') {
+                    source.next();
+                    // Copy characters until closing quote
+                    while source.more() && source.current() != Some('"') {
+                        // Handle escaped characters
+                        if source.current() == Some('\\') {
+                            destination.add_bytes(&source.current().unwrap().to_string());
+                            source.next();
+                        }
+                        destination.add_byte(source.current().unwrap() as u8);
+                        source.next();
+                    }
+                    destination.add_bytes(&source.current().unwrap().to_string());
+                }
+            }
+        }
+        source.next();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -125,10 +155,33 @@ mod tests {
     fn test_print_null() {
         let mut dest = BufferDestination::new();
         print(&Node::None, &mut dest, 0, 0);
-        assert_eq!(
-            dest.to_string(),
-            "null"
-        );
         assert_eq!(dest.to_string(), "null");
+    }
+
+    #[test]
+    fn test_strip_basic_object() {
+        let json = "{ \"name\" :  \"value\" }";
+        let mut source = crate::BufferSource::new(json.as_bytes());
+        let mut dest = BufferDestination::new();
+        strip(&mut source, &mut dest);
+        assert_eq!(dest.to_string(), "{\"name\":\"value\"}");
+    }
+
+    #[test]
+    fn test_strip_string_content() {
+        let json = "{ \"text\" : \"  keep  spaces  \" }";
+        let mut source = crate::BufferSource::new(json.as_bytes());
+        let mut dest = BufferDestination::new();
+        strip(&mut source, &mut dest);
+        assert_eq!(dest.to_string(), "{\"text\":\"  keep  spaces  \"}");
+    }
+
+    #[test]
+    fn test_strip_nested_structure() {
+        let json = "{\n \"array\": [\n  1,\n  2\n ]\n}";
+        let mut source = crate::BufferSource::new(json.as_bytes());
+        let mut dest = BufferDestination::new();
+        strip(&mut source, &mut dest);
+        assert_eq!(dest.to_string(), "{\"array\":[1,2]}");
     }
 }

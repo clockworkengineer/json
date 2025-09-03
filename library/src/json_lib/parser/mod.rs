@@ -1,7 +1,7 @@
-//! Parser module for processing JSON data
-//! Provides functionality to parse JSON strings into structured data
-//! Implements parsing and validation according to JSON specification
+//! Parser module for JSON data processing
+//! Handles parsing of JSON text into internal data structures
+//! Includes validation and error handling for JSON syntax
 
-/// Default implementation of JSON parsing functionality
-/// Handles parsing of JSON values, arrays, objects and primitives
+/// Core JSON parser implementation module
+/// Provides parsing functionality for JSON values and structures
 pub mod default;
