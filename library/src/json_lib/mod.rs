@@ -1,14 +1,14 @@
-/// Input and output operations for reading and writing JSON data
+/// Module providing input/output functionality for reading and writing JSON data
 pub mod io;
-/// Core JSON data types and node structure definitions
+/// Module containing JSON data structure definitions and node types
 pub mod nodes;
-/// JSON parsing and tokenization functionality
+/// Module implementing JSON parsing and value extraction
 pub mod parser;
-/// Error handling and error types for JSON operations
+/// Module defining error types and handling for JSON operations
 pub mod error;
-/// JSON serialization and string formatting capabilities
+/// Module for converting JSON structures to formatted strings
 pub mod stringify;
-/// File system operations for JSON data handling
+/// Module handling JSON file reading and writing operations
 pub mod file;
-/// Miscellaneous utility functions for JSON processing
+/// Module containing utility functions and helpers for JSON processing
 pub mod misc;
