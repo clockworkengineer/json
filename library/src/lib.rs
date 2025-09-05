@@ -3,6 +3,7 @@ pub mod json_lib;
 /// Returns the current version of the JSON library
 pub use json_lib::misc::get_version as version;
 pub use json_lib::misc::strip as strip_whitespace;
+pub use json_lib::misc::print as print;
 /// This enum represents different Unicode text file formats with their corresponding byte order marks (BOM)
 pub use json_lib::file::file::Format as Format;
 /// This function detects the Unicode format of a text file by examining its byte order mark (BOM)

@@ -1,7 +1,7 @@
-use std::path::Path;
-use json_lib::{FileSource, parse, FileDestination}; 
 use json_lib::json_lib::misc::print;
+use json_lib::{FileDestination, FileSource, parse};
 use json_utility_lib::get_json_file_list;
+use std::path::Path;
 
 /// Processes a single JSON file by reading, parsing, and pretty-printing it
 ///
@@ -24,8 +24,9 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
         Path::new(file_path)
             .with_extension("json_pp")
             .to_string_lossy()
-            .as_ref()
-    ).map_err(|e| e.to_string())?;
+            .as_ref(),
+    )
+    .map_err(|e| e.to_string())?;
 
     // Pretty print the JSON with 4-space indentation
     print(&node, &mut destination, 4, 0);
