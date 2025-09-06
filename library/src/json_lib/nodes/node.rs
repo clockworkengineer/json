@@ -87,9 +87,6 @@ impl<T: Into<Node>> From<Vec<T>> for Node {
     }
 }
 
-// Numeric type conversion implementations
-// Each implementation converts a specific numeric type to the Numeric enum
-
 impl From<i64> for Numeric {
     fn from(value: i64) -> Self {
         Numeric::Integer(value)
@@ -102,10 +99,47 @@ impl From<f64> for Numeric {
     }
 }
 
-// ... [remaining Numeric implementations]
+impl From<u64> for Numeric {
+    fn from(value: u64) -> Self {
+        Numeric::UInteger(value)
+    }
+}
 
-// Node type conversion implementations
-// Each implementation converts a specific type to a Node
+impl From<u8> for Numeric {
+    fn from(value: u8) -> Self {
+        Numeric::Byte(value)
+    }
+}
+
+impl From<i32> for Numeric {
+    fn from(value: i32) -> Self {
+        Numeric::Int32(value)
+    }
+}
+
+impl From<u32> for Numeric {
+    fn from(value: u32) -> Self {
+        Numeric::UInt32(value)
+    }
+}
+
+impl From<i16> for Numeric {
+    fn from(value: i16) -> Self {
+        Numeric::Int16(value)
+    }
+}
+
+impl From<u16> for Numeric {
+    fn from(value: u16) -> Self {
+        Numeric::UInt16(value)
+    }
+}
+
+impl From<i8> for Numeric {
+    fn from(value: i8) -> Self {
+        Numeric::Int8(value)
+    }
+}
 
 impl From<i64> for Node {
     fn from(value: i64) -> Self {
@@ -124,7 +158,60 @@ impl From<f64> for Node {
         Node::Number(Numeric::Float(value))
     }
 }
-// ... [remaining Node implementations]
+
+impl From<u64> for Node {
+    fn from(value: u64) -> Self {
+        Node::Number(Numeric::UInteger(value))
+    }
+}
+
+impl From<u8> for Node {
+    fn from(value: u8) -> Self {
+        Node::Number(Numeric::Byte(value))
+    }
+}
+
+impl From<i32> for Node {
+    fn from(value: i32) -> Self {
+        Node::Number(Numeric::Int32(value))
+    }
+}
+
+impl From<u32> for Node {
+    fn from(value: u32) -> Self {
+        Node::Number(Numeric::UInt32(value))
+    }
+}
+
+impl From<i16> for Node {
+    fn from(value: i16) -> Self {
+        Node::Number(Numeric::Int16(value))
+    }
+}
+
+impl From<u16> for Node {
+    fn from(value: u16) -> Self {
+        Node::Number(Numeric::UInt16(value))
+    }
+}
+
+impl From<i8> for Node {
+    fn from(value: i8) -> Self {
+        Node::Number(Numeric::Int8(value))
+    }
+}
+
+impl From<bool> for Node {
+    fn from(value: bool) -> Self {
+        Node::Boolean(value)
+    }
+}
+
+impl From<String> for Node {
+    fn from(value: String) -> Self {
+        Node::Str(value)
+    }
+}
 
 /// Helper functions to create a Node from any value that can be converted into a Node
 pub fn make_node<T>(value: T) -> Node
