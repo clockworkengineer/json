@@ -96,6 +96,12 @@ impl From<i64> for Numeric {
     }
 }
 
+impl From<f64> for Numeric {
+    fn from(value: f64) -> Self {
+        Numeric::Float(value)
+    }
+}
+
 // ... [remaining Numeric implementations]
 
 // Node type conversion implementations
@@ -107,6 +113,17 @@ impl From<i64> for Node {
     }
 }
 
+impl From<&str> for Node {
+    fn from(value: &str) -> Self {
+        Node::Str(String::from(value))
+    }
+}
+
+impl From<f64> for Node {
+    fn from(value: f64) -> Self {
+        Node::Number(Numeric::Float(value))
+    }
+}
 // ... [remaining Node implementations]
 
 /// Helper functions to create a Node from any value that can be converted into a Node

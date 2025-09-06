@@ -25,7 +25,6 @@ name = "json_create_at_runtime"
 version = "0.1.0"
 dependencies = [
  "json_lib",
- "rand",
 ]
 
 [[package]]
