@@ -524,5 +524,11 @@ mod tests {
         let mut source = Buffer::new(b"\"\\\"\\\\\\/\\b\\f\\n\\r\\t\"");
         assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "\"\\/\x08\x0c\n\r\t"));
     }
+    #[test]
+    fn test_string_unicode_escapes() {
+        let mut source = Buffer::new(b"\"\\u0048\\u0065\\u006c\\u006c\\u006f\"");
+        assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "Hello"));
+    }
+    
 }
 

@@ -218,7 +218,7 @@ mod tests {
         stringify(&Node::Number(Numeric::Float(f64::MAX)), &mut dest);
         assert_eq!(dest.to_string(), format!("<number>{}</number>", f64::MAX));
     }
-
+    
     // #[test]
     // fn test_stringify_nested_empty_structures() {
     //     let mut dest = Buffer::new();
@@ -228,4 +228,5 @@ mod tests {
     //     stringify(&Node::Object(map), &mut dest);
     //     assert_eq!(dest.to_string(), "<object><entry><key>empty_array</key><value><array></array></value></entry><entry><key>empty_object</key><value><object></object></value></entry></object>");
     // }
+    
 }

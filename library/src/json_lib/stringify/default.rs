@@ -186,4 +186,5 @@ mod tests {
         stringify(&Node::Str("\u{0000}\u{001F}".to_string()), &mut dest);
         assert_eq!(dest.to_string(), "\"\\u0000\\u001f\"");
     }
+    
 }

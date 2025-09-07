@@ -160,5 +160,14 @@ mod tests {
         stringify(&Node::Object(outer_map), &mut dest);
         assert_eq!(dest.to_string(), "d11:empty_arrayle12:empty_objectde12:empty_string0:e");
     }
+    #[test]
+    fn test_stringify_nested_object() {
+        let mut inner_map = HashMap::new();
+        inner_map.insert("a".to_string(), Node::Str("value1".to_string()));
+        inner_map.insert("b".to_string(), Node::Str("value2".to_string()));
+        let mut outer_map = HashMap::new();
+        outer_map.insert("inner".to_string(), Node::Object(inner_map));
+    }
+
     
 }

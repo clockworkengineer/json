@@ -255,5 +255,5 @@ mod tests {
         ]), &mut dest);
         assert_eq!(dest.to_string(), "\n- \n- 1\n");
     }
-
+    
 }

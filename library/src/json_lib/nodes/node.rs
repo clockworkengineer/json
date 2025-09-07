@@ -350,4 +350,10 @@ where
             assert_eq!(make_node("test"), Node::Str("test".to_string()));
             assert_eq!(make_node(true), Node::Boolean(true));
         }
+        #[test]
+        fn test_make_node_vec() {
+            let vec = vec![1, 2, 3];
+            assert_eq!(make_node(vec), Node::Array(vec![Node::Number(Numeric::Int32(1)), Node::Number(Numeric::Int32(2)), Node::Number(Numeric::Int32(3))]));
+        }
+        
     }
