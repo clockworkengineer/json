@@ -221,8 +221,133 @@ where
     value.into()
 }
 
-// Test module containing comprehensive tests for Node functionality
-#[cfg(test)]
-mod tests {
-    // ... [test implementations remain unchanged]
-}
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn test_numeric_conversions() {
+            assert_eq!(Numeric::from(42i64), Numeric::Integer(42));
+            assert_eq!(Numeric::from(3.14f64), Numeric::Float(3.14));
+            assert_eq!(Numeric::from(42u64), Numeric::UInteger(42));
+            assert_eq!(Numeric::from(42u8), Numeric::Byte(42));
+            assert_eq!(Numeric::from(42i32), Numeric::Int32(42));
+            assert_eq!(Numeric::from(42u32), Numeric::UInt32(42));
+            assert_eq!(Numeric::from(42i16), Numeric::Int16(42));
+            assert_eq!(Numeric::from(42u16), Numeric::UInt16(42));
+            assert_eq!(Numeric::from(42i8), Numeric::Int8(42));
+        }
+
+        #[test]
+        fn test_node_numeric_conversions() {
+            assert_eq!(Node::from(42i64), Node::Number(Numeric::Integer(42)));
+            assert_eq!(Node::from(3.14f64), Node::Number(Numeric::Float(3.14)));
+            assert_eq!(Node::from(42u64), Node::Number(Numeric::UInteger(42)));
+            assert_eq!(Node::from(42u8), Node::Number(Numeric::Byte(42)));
+            assert_eq!(Node::from(42i32), Node::Number(Numeric::Int32(42)));
+            assert_eq!(Node::from(42u32), Node::Number(Numeric::UInt32(42)));
+            assert_eq!(Node::from(42i16), Node::Number(Numeric::Int16(42)));
+            assert_eq!(Node::from(42u16), Node::Number(Numeric::UInt16(42)));
+            assert_eq!(Node::from(42i8), Node::Number(Numeric::Int8(42)));
+        }
+
+        #[test]
+        fn test_node_string_conversions() {
+            assert_eq!(Node::from("test"), Node::Str("test".to_string()));
+            assert_eq!(Node::from("test".to_string()), Node::Str("test".to_string()));
+        }
+
+        #[test]
+        fn test_node_bool_conversion() {
+            assert_eq!(Node::from(true), Node::Boolean(true));
+            assert_eq!(Node::from(false), Node::Boolean(false));
+        }
+
+        #[test]
+        fn test_node_vec_conversion() {
+            let vec = vec![1, 2, 3];
+            let node = Node::from(vec);
+            match node {
+                Node::Array(arr) => {
+                    assert_eq!(arr.len(), 3);
+                    assert_eq!(arr[0], Node::Number(Numeric::Int32(1)));
+                    assert_eq!(arr[1], Node::Number(Numeric::Int32(2)));
+                    assert_eq!(arr[2], Node::Number(Numeric::Int32(3)));
+                }
+                _ => panic!("Expected Array node"),
+            }
+        }
+
+        #[test]
+        fn test_array_indexing() {
+            let arr = Node::Array(vec![Node::from(1), Node::from(2)]);
+            assert_eq!(arr[0], Node::Number(Numeric::Int32(1)));
+            assert_eq!(arr[1], Node::Number(Numeric::Int32(2)));
+        }
+
+        #[test]
+        #[should_panic(expected = "Cannot index non-array node with integer")]
+        fn test_invalid_array_indexing() {
+            let node = Node::Boolean(true);
+            let _value = &node[0];
+        }
+
+        #[test]
+        fn test_object_indexing() {
+            let mut map = HashMap::new();
+            map.insert("key".to_string(), Node::from(42));
+            let obj = Node::Object(map);
+            assert_eq!(obj["key"], Node::Number(Numeric::Int32(42)));
+        }
+
+        #[test]
+        #[should_panic(expected = "Cannot index non-object node with string")]
+        fn test_invalid_object_indexing() {
+            let node = Node::Boolean(true);
+            let _value = &node["key"];
+        }
+
+        #[test]
+        fn test_array_mut_indexing() {
+            let mut arr = Node::Array(vec![Node::from(1), Node::from(2)]);
+            arr[0] = Node::from(42);
+            assert_eq!(arr[0], Node::Number(Numeric::Int32(42)));
+        }
+
+        #[test]
+        #[should_panic(expected = "Cannot index non-array node with integer")]
+        fn test_invalid_array_mut_indexing() {
+            let mut node = Node::Boolean(true);
+            node[0] = Node::from(42);
+        }
+
+        #[test]
+        fn test_object_mut_indexing() {
+            let mut map = HashMap::new();
+            map.insert("key".to_string(), Node::from(42));
+            let mut obj = Node::Object(map);
+            obj["key"] = Node::from(100);
+            assert_eq!(obj["key"], Node::Number(Numeric::Int32(100)));
+        }
+
+        #[test]
+        #[should_panic(expected = "Cannot index non-object node with string")]
+        fn test_invalid_object_mut_indexing() {
+            let mut node = Node::Boolean(true);
+            node["key"] = Node::from(42);
+        }
+
+        #[test]
+        #[should_panic(expected = "No such key exists")]
+        fn test_object_mut_indexing_nonexistent_key() {
+            let mut obj = Node::Object(HashMap::new());
+            obj["nonexistent"] = Node::from(42);
+        }
+    
+        #[test]
+        fn test_make_node() {
+            assert_eq!(make_node(42), Node::Number(Numeric::Int32(42)));
+            assert_eq!(make_node("test"), Node::Str("test".to_string()));
+            assert_eq!(make_node(true), Node::Boolean(true));
+        }
+    }
