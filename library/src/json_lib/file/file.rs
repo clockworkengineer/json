@@ -327,4 +327,18 @@ mod tests {
         fs::remove_file("test_write_utf32be.txt")?;
         Ok(())
     }
+    #[test]
+    fn test_write_formatted_testfile021() -> Result<()> {
+        let test_content = "[true  , \"Out of time\",  7.89043e+18, true]";
+        write_file_from_string("../files/formatted/testfile021.json", test_content, Format::Utf8)?;
+        assert_eq!(read_file_to_string("../files/formatted/testfile021.json")?, test_content);
+        Ok(())
+    }
+    #[test]
+    fn test_write_formatted_testfile022() -> Result<()> {
+        let test_content = "[true  , \"Out of time\",  7.89043e+18, true]";
+        write_file_from_string("../files/formatted/testfile022.json", test_content, Format::Utf8bom)?;
+        assert_eq!(read_file_to_string("../files/formatted/testfile022.json")?, test_content);
+        Ok(())
+    }
 }
