@@ -27,6 +27,10 @@ pub mod file;
 /// Module containing utility functions and helpers for JSON processing
 pub mod misc;
 
+///
+/// JSON_lib API
+///
+
 /// Returns the current version of the JSON library
 pub use misc::get_version as version;
 /// Strip whitespace from a string.
