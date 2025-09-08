@@ -35,6 +35,6 @@ fn main() {
     let root = Node::Object(root_map);
 
     // Print the tree
-    print(&root, &mut destination, 4, 0);
+    print(&root, &mut destination, 4);
     print!("{}", destination.to_string());
 }   

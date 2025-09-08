@@ -11,6 +11,9 @@ use crate::nodes::node::Numeric;
 pub fn get_version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
+pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize) {
+    pretty_print(node, destination, indent, 0);
+}
 /// Prints a JSON node to the specified destination with formatting
 ///
 /// # Arguments
@@ -18,7 +21,7 @@ pub fn get_version() -> &'static str {
 /// * `destination` - The output destination implementing IDestination
 /// * `indent` - Number of spaces to use for each indentation level
 /// * `current_indent` - Current indentation level in spaces
-pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, current_indent: usize) {
+ fn pretty_print(node: &Node, destination: &mut dyn IDestination, indent: usize, current_indent: usize) {
     match node {
         // Handle boolean values (true/false)
         Node::Boolean(value) => destination.add_bytes(&value.to_string()),
@@ -43,7 +46,7 @@ pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, cur
             destination.add_bytes("[\n");
             for (i, item) in array.iter().enumerate() {
                 destination.add_bytes(&" ".repeat(current_indent + indent));
-                print(item, destination, indent, current_indent + indent);
+                pretty_print(item, destination, indent, current_indent + indent);
                 if i < array.len() - 1 {
                     destination.add_bytes(",");
                 }
@@ -59,7 +62,7 @@ pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize, cur
                 destination.add_bytes(&" ".repeat(current_indent + indent));
                 destination.add_bytes(&format!("\"{}\"", key));
                 destination.add_bytes(": ");
-                print(value, destination, indent, current_indent + indent);
+                pretty_print(value, destination, indent, current_indent + indent);
                 if i < map.len() - 1 {
                     destination.add_bytes(",");
                 }
@@ -116,28 +119,28 @@ mod tests {
     #[test]
     fn test_print_boolean() {
         let mut dest = BufferDestination::new();
-        print(&Node::Boolean(true), &mut dest, 0, 0);
+        print(&Node::Boolean(true), &mut dest, 0);
         assert_eq!(dest.to_string(), "true");
     }
 
     #[test]
     fn test_print_numeric() {
         let mut dest = BufferDestination::new();
-        print(&Node::Number(Numeric::Integer(42)), &mut dest, 0, 0);
+        print(&Node::Number(Numeric::Integer(42)), &mut dest, 0);
         assert_eq!(dest.to_string(), "42");
     }
 
     #[test]
     fn test_print_string() {
         let mut dest = BufferDestination::new();
-        print(&Node::Str("hello".to_string()), &mut dest, 0, 0);
+        print(&Node::Str("hello".to_string()), &mut dest, 0);
         assert_eq!(dest.to_string(), "\"hello\"");
     }
 
     #[test]
     fn test_print_array() {
         let mut dest = BufferDestination::new();
-        print(&Node::Array(vec![Node::Boolean(true), Node::Number(Numeric::Integer(1))]), &mut dest, 0, 0);
+        print(&Node::Array(vec![Node::Boolean(true), Node::Number(Numeric::Integer(1))]), &mut dest, 0);
         assert_eq!(dest.to_string(), "[\ntrue,\n1\n]");
     }
 
@@ -147,14 +150,14 @@ mod tests {
         let mut map = BTreeMap::new();
         map.insert("key".to_string(), Node::Str("value".to_string()));
         let hashmap: std::collections::HashMap<String, Node> = map.into_iter().collect();
-        print(&Node::Object(hashmap), &mut dest, 0, 0);
+        print(&Node::Object(hashmap), &mut dest, 0);
         assert_eq!(dest.to_string(), "{\n\"key\": \"value\"\n}");
     }
 
     #[test]
     fn test_print_null() {
         let mut dest = BufferDestination::new();
-        print(&Node::None, &mut dest, 0, 0);
+        print(&Node::None, &mut dest, 0);
         assert_eq!(dest.to_string(), "null");
     }
 

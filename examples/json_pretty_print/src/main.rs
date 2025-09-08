@@ -29,7 +29,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
 
     // Pretty print the JSON with 4-space indentation
-    print(&node, &mut destination, 4, 0);
+    print(&node, &mut destination, 4);
     Ok(())
 }
 
