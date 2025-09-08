@@ -16,9 +16,7 @@ pub mod io;
 pub mod nodes;
 /// Module implementing JSON parsing and value extraction
 pub mod parser;
-/// Module defining error types and handling for JSON operations,
-/// including custom error types, error conversion implementations,
-/// and utility functions for error handling
+/// Module defining error types and handling for JSON operations.
 pub mod error;
 /// Module for converting JSON structures to formatted strings
 pub mod stringify;
