@@ -1,3 +1,16 @@
+//! json_lib - A lightweight, modular JSON toolkit for Rust
+//!
+//! This library provides a flexible JSON implementation with:
+//! - Core Node type for representing JSON structures
+//! - Parser to build Node trees from streams 
+//! - Multiple format serializers (JSON, YAML, XML, Bencode)
+//! - File and buffer I/O abstractions
+//! - Pretty-printing utilities
+//! - Unicode-aware file handling
+//!
+//! Minimum supported Rust version: 1.88.0
+
+/// Module providing input/output operations for reading and writing JSON data
 pub mod io;
 /// Module containing JSON data structure definitions and node types
 pub mod nodes;
