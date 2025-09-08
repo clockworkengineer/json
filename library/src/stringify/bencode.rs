@@ -2,8 +2,8 @@
 //! Bencode is the encoding used by the peer-to-peer file sharing system BitTorrent
 //! for storing and transmitting loosely structured data.
 
-use crate::json_lib::nodes::node::*;
-use crate::json_lib::io::traits::IDestination;
+use crate::nodes::node::*;
+use crate::io::traits::IDestination;
 
 /// Converts a Node into its bencode string representation and writes it to the destination.
 ///
@@ -60,7 +60,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use crate::json_lib::io::destinations::buffer::Buffer;
+    use crate::io::destinations::buffer::Buffer;
 
     #[test]
     fn test_stringify_none() {

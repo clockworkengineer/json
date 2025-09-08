@@ -1,5 +1,5 @@
-use crate::json_lib::nodes::node::*;
-use crate::json_lib::io::traits::IDestination;
+use crate::nodes::node::*;
+use crate::io::traits::IDestination;
 
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     match node {
@@ -67,7 +67,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use crate::json_lib::io::destinations::buffer::Buffer;
+    use crate::io::destinations::buffer::Buffer;
     
     #[test]
     fn test_stringify_null() {

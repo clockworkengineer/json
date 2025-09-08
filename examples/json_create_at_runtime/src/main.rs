@@ -1,5 +1,5 @@
-use json_lib::json_lib::misc::print;
-use json_lib::json_lib::nodes::node::{Node, make_node};
+use json_lib::misc::print;
+use json_lib::nodes::node::{Node, make_node};
 use json_lib::BufferDestination;
 use std::collections::HashMap;
 

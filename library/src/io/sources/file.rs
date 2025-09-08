@@ -1,6 +1,6 @@
 use std::fs::File as StdFile;
 use std::io::{Read, Seek, SeekFrom};
-use crate::json_lib::io::traits::ISource;
+use crate::io::traits::ISource;
 
 /// A file-based implementation for reading JSON data from disk.
 /// Provides functionality to read and traverse file content byte by byte.

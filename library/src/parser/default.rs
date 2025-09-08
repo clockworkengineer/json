@@ -2,11 +2,11 @@
 //! Provides functions for parsing different JSON data types including objects,
 //! arrays, strings, numbers, booleans, and null values.
 
-use crate::json_lib::nodes::node::Node;
-use crate::json_lib::nodes::node::Numeric;
+use crate::nodes::node::Node;
+use crate::nodes::node::Numeric;
 use std::collections::HashMap;
-use crate::json_lib::io::traits::ISource;
-use crate::json_lib::error::messages::*;
+use crate::io::traits::ISource;
+use crate::error::messages::*;
 
 /// Parses JSON input from a source and returns a Node representation
 ///
@@ -309,7 +309,7 @@ fn parse_null(source: &mut dyn ISource) -> Result<Node, String> {
 /// Includes tests for all JSON data types and error conditions
 mod tests {
     use super::*;
-    use crate::json_lib::io::sources::buffer::Buffer;
+    use crate::io::sources::buffer::Buffer;
     use std::fs;
     use crate::FileSource;
 

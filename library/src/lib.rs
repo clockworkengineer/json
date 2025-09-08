@@ -1,38 +1,52 @@
-pub mod json_lib;
+pub mod io;
+/// Module containing JSON data structure definitions and node types
+pub mod nodes;
+/// Module implementing JSON parsing and value extraction
+pub mod parser;
+/// Module defining error types and handling for JSON operations,
+/// including custom error types, error conversion implementations,
+/// and utility functions for error handling
+pub mod error;
+/// Module for converting JSON structures to formatted strings
+pub mod stringify;
+/// Module handling JSON file reading and writing operations
+pub mod file;
+/// Module containing utility functions and helpers for JSON processing
+pub mod misc;
 
 /// Returns the current version of the JSON library
-pub use json_lib::misc::get_version as version;
-pub use json_lib::misc::strip as strip_whitespace;
-pub use json_lib::misc::print as print;
+pub use misc::get_version as version;
+pub use misc::strip as strip_whitespace;
+pub use misc::print as print;
 /// This enum represents different Unicode text file formats with their corresponding byte order marks (BOM)
-pub use json_lib::file::file::Format as Format;
+pub use file::file::Format as Format;
 /// This function detects the Unicode format of a text file by examining its byte order mark (BOM)
-pub use json_lib::file::file::detect_format as detect_format;
+pub use file::file::detect_format as detect_format;
 /// This function reads a text file and returns its content as a String, handling different Unicode formats
-pub use json_lib::file::file::read_file_to_string as read_file_to_string;
+pub use file::file::read_file_to_string as read_file_to_string;
 /// This function writes a string to a file in the specified Unicode format
-pub use json_lib::file::file::write_file_from_string as write_file_from_string;
+pub use file::file::write_file_from_string as write_file_from_string;
 
 /// Source implementation for reading JSON data from a memory buffer
-pub use json_lib::io::sources::buffer::Buffer as BufferSource;
+pub use io::sources::buffer::Buffer as BufferSource;
 /// Destination implementation for writing JSON data to a memory buffer
-pub use json_lib::io::destinations::buffer::Buffer as BufferDestination;
+pub use io::destinations::buffer::Buffer as BufferDestination;
 /// Source implementation for reading JSON data from a file
-pub use json_lib::io::sources::file::File as FileSource;
+pub use io::sources::file::File as FileSource;
 /// Destination implementation for writing JSON data to a file
-pub use json_lib::io::destinations::file::File as FileDestination;
+pub use io::destinations::file::File as FileDestination;
 
 /// Core data structure representing a JSON node and numerical node in the parsed tree
-pub use json_lib::nodes::node::Node as Node;
-pub use json_lib::nodes::node::Numeric as Numeric;
+pub use nodes::node::Node as Node;
+pub use nodes::node::Numeric as Numeric;
 
 /// Converts a Node tree back to JSON format
-pub use json_lib::stringify::default::stringify as stringify;
+pub use stringify::default::stringify as stringify;
 /// Parses json data into a Node tree structure
-pub use json_lib::parser::default::parse as parse;
+pub use parser::default::parse as parse;
 /// Converts a Node tree to JSON format
-pub use json_lib::stringify::bencode::stringify as to_bencode;
+pub use stringify::bencode::stringify as to_bencode;
 /// Converts a Node tree to YAML format
-pub use json_lib::stringify::yaml::stringify as to_yaml;
+pub use stringify::yaml::stringify as to_yaml;
 /// Converts a Node tree to XML format
-pub use json_lib::stringify::xml::stringify as to_xml;
+pub use stringify::xml::stringify as to_xml;

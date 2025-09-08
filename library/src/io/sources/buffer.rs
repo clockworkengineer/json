@@ -1,4 +1,4 @@
-use crate::json_lib::io::traits::ISource;
+use crate::io::traits::ISource;
 
 /// A memory buffer implementation for reading JSON data from bytes.
 /// Provides functionality to traverse and read byte content from memory.

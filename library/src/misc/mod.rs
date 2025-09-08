@@ -1,9 +1,9 @@
 //! Miscellaneous utility functions for JSON processing
 //! Contain functionality for version information and formatted JSON printing
 
-use crate::json_lib::io::traits::{IDestination, ISource};
+use crate::io::traits::{IDestination, ISource};
 use crate::Node;
-use crate::json_lib::nodes::node::Numeric;
+use crate::nodes::node::Numeric;
 
 /// Returns the current version of the package as specified in Cargo.toml.
 /// Uses CARGO_PKG_VERSION environment variable that is set during compilation

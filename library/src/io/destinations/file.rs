@@ -1,6 +1,6 @@
 use std::fs::File as StdFile;
 use std::io::{Write, Read, Seek};
-use crate::json_lib::io::traits::IDestination;
+use crate::io::traits::IDestination;
 
 /// A file-based destination for writing JSON data to disk.
 /// Implements file operations for storing and manipulating encoded data.

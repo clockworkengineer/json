@@ -1,8 +1,8 @@
 //! XML serialization module for JSON nodes
 //! Provides functionality to convert JSON nodes into XML format
 
-use crate::json_lib::nodes::node::*;
-use crate::json_lib::io::traits::IDestination;
+use crate::nodes::node::*;
+use crate::io::traits::IDestination;
 
 /// Escapes special XML characters in a string and writes them to the destination
 ///
@@ -90,7 +90,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use crate::json_lib::io::destinations::buffer::Buffer;
+    use crate::io::destinations::buffer::Buffer;
 
     #[test]
     fn test_stringify_null() {

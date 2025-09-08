@@ -1,4 +1,4 @@
-use json_lib::json_lib::misc::print;
+use json_lib::misc::print;
 use json_lib::{FileDestination, FileSource, parse};
 use json_utility_lib::get_json_file_list;
 use std::path::Path;

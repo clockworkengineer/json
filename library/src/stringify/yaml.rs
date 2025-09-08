@@ -1,8 +1,8 @@
 //! YAML string conversion module for Node structures
 //! Provides functionality to convert Node types into YAML formatted strings
 
-use crate::json_lib::nodes::node::*;
-use crate::json_lib::io::traits::IDestination;
+use crate::nodes::node::*;
+use crate::io::traits::IDestination;
 
 /// Converts a Node into a YAML formatted string and writes it to the destination
 ///
@@ -86,7 +86,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use crate::json_lib::io::destinations::buffer::Buffer;
+    use crate::io::destinations::buffer::Buffer;
 
     #[test]
     fn test_stringify_null() {
