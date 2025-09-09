@@ -6,3 +6,5 @@ pub mod bencode;
 pub mod yaml;
 /// Module for XML format serialization and string conversion
 pub mod xml;
+/// Module for TOML format serialization and string conversion
+pub mod toml;

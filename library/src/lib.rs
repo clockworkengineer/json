@@ -66,3 +66,5 @@ pub use stringify::bencode::stringify as to_bencode;
 pub use stringify::yaml::stringify as to_yaml;
 /// Converts a Node tree to XML format
 pub use stringify::xml::stringify as to_xml;
+/// Converts a Node tree to TOML format
+pub use stringify::xml::stringify as to_toml;
