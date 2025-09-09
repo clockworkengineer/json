@@ -52,11 +52,10 @@ pub use io::destinations::buffer::Buffer as BufferDestination;
 pub use io::sources::file::File as FileSource;
 /// Destination implementation for writing JSON data to a file
 pub use io::destinations::file::File as FileDestination;
-
 /// Core data structure representing a JSON node and numerical node in the parsed tree
 pub use nodes::node::Node as Node;
+/// Core data structure representing a numeric value node in the parsed tree
 pub use nodes::node::Numeric as Numeric;
-
 /// Converts a Node tree back to JSON format
 pub use stringify::default::stringify as stringify;
 /// Parses json data into a Node tree structure
