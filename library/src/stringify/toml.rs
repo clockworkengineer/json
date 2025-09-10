@@ -1,5 +1,7 @@
 use crate::io::traits::IDestination;
-use crate::Node;
+use crate::{Node, Numeric};
+
+
 
 /// Converts a JSON node to TOML format and writes it to the destination
 ///
@@ -14,7 +16,24 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
                 destination.add_bytes(s);
                 destination.add_bytes("\"");
             }
-            Node::Number(n) => destination.add_bytes(&format!("{:?}", n)),
+            Node::Number(value) => match value {
+                // Handles signed integer values
+                Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
+                // Handles unsigned integer values
+                Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
+                // Handles floating point numbers
+                Numeric::Float(f) => destination.add_bytes(&f.to_string()),
+                // Handles 8-bit unsigned values (0-255)
+                Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
+                // Handles 32-bit signed integers (-2^31 to 2^31-1)
+                Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
+                // Handles 32-bit unsigned integers (0 to 2^32-1)
+                Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
+                // Fallback for any future numeric variants
+                // If there are any other variants, add them here
+                #[allow(unreachable_patterns)]
+                _ => destination.add_bytes(&format!("{:?}", value)),
+            },
             Node::Boolean(b) => destination.add_bytes(&*b.to_string()),
             Node::None => destination.add_bytes("null"),
             Node::Array(arr) => {
@@ -63,4 +82,74 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
     } else {
         write_value(node, destination);
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::BufferDestination;
+    use std::collections::{ HashMap};
+
+    #[test]
+    fn test_stringify_string() {
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Str("test".to_string()), &mut dest);
+        assert_eq!(dest.to_string(), "\"test\"");
+    }
+
+    #[test]
+    fn test_stringify_number() {
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Number(crate::nodes::node::Numeric::Float(42.0)), &mut dest);
+        assert_eq!(dest.to_string(), "42");
+    }
+
+    #[test]
+    fn test_stringify_boolean() {
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Boolean(true), &mut dest);
+        assert_eq!(dest.to_string(), "true");
+    }
+
+    #[test]
+    fn test_stringify_none() {
+        let mut dest = BufferDestination::new();
+        stringify(&Node::None, &mut dest);
+        assert_eq!(dest.to_string(), "null");
+    }
+
+    #[test]
+    fn test_stringify_array() {
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Array(vec![
+            Node::Str("a".to_string()),
+            Node::Number(crate::nodes::node::Numeric::Float(1.0)),
+            Node::Boolean(true)
+        ]), &mut dest);
+        assert_eq!(dest.to_string(), "[\"a\", 1, true]");
+    }
+
+    #[test]
+    fn test_stringify_object() {
+        let mut map = HashMap::new();
+        map.insert("key".to_string(), Node::Str("value".to_string()));
+        let mut dest = BufferDestination::new();
+        let hashmap = map.into_iter().collect::<std::collections::HashMap<_, _>>();
+        stringify(&Node::Object(hashmap), &mut dest);
+        assert_eq!(dest.to_string(), "key = \"value\"\n");
+    }
+
+    // #[test]
+    // fn test_stringify_nested_object() {
+    //     let mut inner = HashMap::new();
+    //     inner.insert("inner_key".to_string(), Node::Str("value".to_string()));
+    //     let inner_hashmap = inner.into_iter().collect::<std::collections::HashMap<_, _>>();
+    //     let mut outer = HashMap::new();
+    //     outer.insert("outer".to_string(), Node::Object(inner_hashmap));
+    //     let outer_hashmap = outer.into_iter().collect::<std::collections::HashMap<_, _>>();
+    //     let mut dest = BufferDestination::new();
+    //     stringify(&Node::Object(outer_hashmap), &mut dest);
+    //     assert_eq!(dest.to_string(), "\n[outer]\ninner_key = \"value\"\n");
+    // }
+
 }
