@@ -1,12 +1,34 @@
 //! JSON parser implementation that converts JSON text into Node structures
 //! Provides functions for parsing different JSON data types including objects,
-//! arrays, strings, numbers, booleans, and null values.
+//! arrays, strings, numbers, boolean and null values.
 
 use crate::nodes::node::Node;
 use crate::nodes::node::Numeric;
 use std::collections::HashMap;
 use crate::io::traits::ISource;
 use crate::error::messages::*;
+
+/// Constants used for JSON parsing
+/// These define the special characters and starting characters
+/// used to identify different JSON elements like objects, arrays,
+/// strings, numbers and literals
+const OBJECT_START: char = '{';
+const OBJECT_END: char = '}';
+const ARRAY_START: char = '[';
+const ARRAY_END: char = ']';
+const QUOTE: char = '"';
+const COMMA: char = ',';
+const COLON: char = ':';
+const BACKSLASH: char = '\\';
+const TRUE_START: char = 't';
+const FALSE_START: char = 'f';
+const NULL_START: char = 'n';
+const MINUS: char = '-';
+const DECIMAL_POINT: char = '.';
+const EXPONENT_LOWER: char = 'e';
+const EXPONENT_UPPER: char = 'E';
+const PLUS: char = '+';
+
 
 /// Parses JSON input from a source and returns a Node representation
 ///
@@ -19,13 +41,13 @@ pub fn parse(source: &mut dyn ISource) -> Result<Node, String> {
     skip_whitespace(source);
 
     match source.current() {
-        Some('{') => parse_object(source),
-        Some('[') => parse_array(source),
-        Some('"') => parse_string(source),
-        Some('t') => parse_true(source),
-        Some('f') => parse_false(source),
-        Some('n') => parse_null(source),
-        Some(c) if c.is_digit(10) || c == '-' => parse_number(source),
+        Some(OBJECT_START) => parse_object(source),
+        Some(ARRAY_START) => parse_array(source),
+        Some(QUOTE) => parse_string(source),
+        Some(TRUE_START) => parse_true(source),
+        Some(FALSE_START) => parse_false(source),
+        Some(NULL_START) => parse_null(source),
+        Some(c) if c.is_digit(10) || c == MINUS => parse_number(source),
         Some(c) => Err(format!("{}{}", ERR_UNEXPECTED_CHAR, c)),
         None => Err(ERR_EMPTY_INPUT.to_string())
     }
@@ -58,7 +80,7 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
 
     skip_whitespace(source);
 
-    if let Some('}') = source.current() {
+    if let Some(OBJECT_END) = source.current() {
         source.next();
         return Ok(Node::Object(map));
     }
@@ -76,7 +98,7 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
 
         // Check for colon
         match source.current() {
-            Some(':') => source.next(),
+            Some(COLON) => source.next(),
             _ => return Err(ERR_EXPECT_COLON.to_string())
         }
 
@@ -89,11 +111,11 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
         skip_whitespace(source);
 
         match source.current() {
-            Some(',') => {
+            Some(COMMA) => {
                 source.next();
                 continue;
             }
-            Some('}') => {
+            Some(OBJECT_END) => {
                 source.next();
                 break;
             }
@@ -118,7 +140,7 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
 
     skip_whitespace(source);
 
-    if let Some(']') = source.current() {
+    if let Some(ARRAY_END) = source.current() {
         source.next();
         return Ok(Node::Array(vec));
     }
@@ -129,11 +151,11 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
         skip_whitespace(source);
 
         match source.current() {
-            Some(',') => {
+            Some(COMMA) => {
                 source.next();
                 continue;
             }
-            Some(']') => {
+            Some(ARRAY_END) => {
                 source.next();
                 break;
             }
@@ -158,11 +180,11 @@ fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
 
     while let Some(c) = source.current() {
         match c {
-            '"' => {
+            QUOTE => {
                 source.next();
                 return Ok(Node::Str(s));
             }
-            '\\' => {
+            BACKSLASH => {
                 source.next();
                 match source.current() {
                     Some('"') => s.push('"'),
@@ -223,8 +245,8 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
     let mut is_float = false;
 
     // Handle negative numbers
-    if source.current() == Some('-') {
-        num_str.push('-');
+    if source.current() == Some(MINUS) {
+        num_str.push(MINUS);
         source.next();
     }
 
@@ -234,7 +256,7 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
                 num_str.push(c);
                 source.next();
             }
-            '.' => {
+            DECIMAL_POINT => {
                 if is_float {
                     return Err(ERR_MULTIPLE_DECIMAL.to_string());
                 }
@@ -242,13 +264,13 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
                 num_str.push(c);
                 source.next();
             }
-            'e' | 'E' => {
+            EXPONENT_LOWER | EXPONENT_UPPER => {
                 is_float = true;
                 num_str.push(c);
                 source.next();
 
                 if let Some(sign) = source.current() {
-                    if sign == '+' || sign == '-' {
+                    if sign == PLUS || sign == MINUS {
                         num_str.push(sign);
                         source.next();
                     }
