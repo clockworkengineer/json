@@ -26,7 +26,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
     ).map_err(|e| e.to_string())?;
 
     // Convert the parsed JSON node to TOML format and write to destination
-    to_toml(&node, &mut destination);
+    to_toml(&node, &mut destination)?;
     Ok(())
 }
 
