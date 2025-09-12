@@ -64,22 +64,24 @@ fn write_value(value: &Node, destination: &mut dyn IDestination) {
 /// * `destination` - The output destination implementing `IDestination`.
 fn write_table(prefix: &str, obj: &Node, destination: &mut dyn IDestination) {
     if let Node::Object(map) = obj {
+        // First, write all non-object values
         for (key, value) in map {
-            match value {
-                Node::Object(_) => {
-                    let new_prefix = if prefix.is_empty() {
-                        key.to_string()
-                    } else {
-                        format!("{}.{}", prefix, key)
-                    };
-                    destination.add_bytes(&format!("\n[{}]\n", new_prefix));
-                    write_table(&new_prefix, value, destination);
-                }
-                _ => {
-                    destination.add_bytes(&format!("{} = ", key));
-                    write_value(value, destination);
-                    destination.add_bytes("\n");
-                }
+            if !matches!(value, Node::Object(_)) {
+                destination.add_bytes(&format!("{} = ", key));
+                write_value(value, destination);
+                destination.add_bytes("\n");
+            }
+        }
+        // Then, write all nested objects (tables)
+        for (key, value) in map {
+            if let Node::Object(_) = value {
+                let new_prefix = if prefix.is_empty() {
+                    key.to_string()
+                } else {
+                    format!("{}.{}", prefix, key)
+                };
+                destination.add_bytes(&format!("\n[{}]\n", new_prefix));
+                write_table(&new_prefix, value, destination);
             }
         }
     }
@@ -150,4 +152,55 @@ mod tests {
         stringify(&Node::Object(outer_hashmap), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "\n[outer]\ninner_key = \"value\"\n");
     }
+    // ...existing code...
+
+    #[test]
+    fn test_stringify_deeply_nested_object() {
+        let mut level3 = HashMap::new();
+        level3.insert("deep_key".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(123)));
+        let level3 = Node::Object(level3);
+
+        let mut level2 = HashMap::new();
+        level2.insert("level3".to_string(), level3);
+        let level2 = Node::Object(level2);
+
+        let mut level1 = HashMap::new();
+        level1.insert("level2".to_string(), level2);
+        let level1 = Node::Object(level1);
+
+        let mut root = HashMap::new();
+        root.insert("level1".to_string(), level1);
+
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "\n[level1.level2.level3]\ndeep_key = 123\n"
+        );
+    }
+
+    // #[test]
+    // fn test_stringify_object_with_multiple_nested_tables_and_values() {
+    //     let mut address = HashMap::new();
+    //     address.insert("city".to_string(), Node::Str("Paris".to_string()));
+    //     address.insert("zip".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(75000)));
+
+    //     let mut profile = HashMap::new();
+    //     profile.insert("name".to_string(), Node::Str("Alice".to_string()));
+    //     profile.insert("age".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(30)));
+    //     profile.insert("address".to_string(), Node::Object(address));
+
+    //     let mut root = HashMap::new();
+    //     root.insert("profile".to_string(), Node::Object(profile));
+    //     root.insert("active".to_string(), Node::Boolean(true));
+
+    //     let mut dest = BufferDestination::new();
+    //     stringify(&Node::Object(root), &mut dest).unwrap();
+    //     assert_eq!(
+    //         dest.to_string(),
+    //         "active = true\n\n[profile]\nname = \"Alice\"\nage = 30\n\n[profile.address]\ncity = \"Paris\"\nzip = 75000\n"
+    //     );
+    // }
+
+// ...existing code...
 }
