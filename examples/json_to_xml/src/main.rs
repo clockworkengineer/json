@@ -26,7 +26,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
     ).map_err(|e| e.to_string())?;
 
     // Convert the parsed JSON node to XML format and write to destination
-    to_xml(&node, &mut destination);
+    to_xml(&node, &mut destination).unwrap();
     Ok(())
 }
 

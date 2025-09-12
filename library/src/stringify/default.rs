@@ -1,7 +1,20 @@
+//! JSON stringifier module.
+//!
+//! Provides a function to serialize a `Node` (representing a JSON value) into a string
+//! and write it to a destination implementing `IDestination`. Handles all JSON value types,
+//! including strings (with proper escaping), numbers, booleans, arrays, objects, and nulls.
+
 use crate::nodes::node::*;
 use crate::io::traits::IDestination;
 
-pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
+/// Serializes a `Node` into JSON and writes it to the given destination.
+///
+/// # Arguments
+///
+/// * `node` - The JSON node to serialize.
+/// * `destination` - The destination to write the JSON string to.
+
+pub fn stringify(node: &Node, destination: &mut dyn IDestination)-> Result<(), String> {
     match node {
         Node::None => destination.add_bytes("null"),
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
@@ -44,7 +57,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
                 if index > 0 {
                     destination.add_bytes(",");
                 }
-                stringify(item, destination);
+                stringify(item, destination)?;
             }
             destination.add_bytes("]");
         }
@@ -54,13 +67,14 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
                 if index > 0 {
                     destination.add_bytes(",");
                 }
-                stringify(&Node::Str(key.clone()), destination);
+                stringify(&Node::Str(key.clone()), destination)?;
                 destination.add_bytes(":");
-                stringify(value, destination);
+                stringify(value, destination)?;
             }
             destination.add_bytes("}");
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -72,28 +86,28 @@ mod tests {
     #[test]
     fn test_stringify_null() {
         let mut dest = Buffer::new();
-        stringify(&Node::None, &mut dest);
+        stringify(&Node::None, &mut dest).unwrap();
         assert_eq!(dest.to_string(), "null");
     }
 
     #[test]
     fn test_stringify_boolean() {
         let mut dest = Buffer::new();
-        stringify(&Node::Boolean(true), &mut dest);
+        stringify(&Node::Boolean(true), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "true");
     }
 
     #[test]
     fn test_stringify_number() {
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::Float(42.5)), &mut dest);
+        stringify(&Node::Number(Numeric::Float(42.5)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "42.5");
     }
 
     #[test]
     fn test_stringify_string() {
         let mut dest = Buffer::new();
-        stringify(&Node::Str("Hello\n\"World\"".to_string()), &mut dest);
+        stringify(&Node::Str("Hello\n\"World\"".to_string()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "\"Hello\\n\\\"World\\\"\"");
     }
 
@@ -103,7 +117,7 @@ mod tests {
         stringify(&Node::Array(vec![
             Node::Number(Numeric::Float(1.0)),
             Node::Str("test".to_string()),
-        ]), &mut dest);
+        ]), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[1,\"test\"]");
     }
 
@@ -112,7 +126,7 @@ mod tests {
         let mut dest = Buffer::new();
         let mut map = HashMap::new();
         map.insert("key".to_string(), Node::Str("value".to_string()));
-        stringify(&Node::Object(map), &mut dest);
+        stringify(&Node::Object(map), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "{\"key\":\"value\"}");
     }
 
@@ -123,7 +137,7 @@ mod tests {
         inner_map.insert("inner_key".to_string(), Node::Number(Numeric::Integer(42)));
         let mut outer_map = HashMap::new();
         outer_map.insert("outer_key".to_string(), Node::Object(inner_map));
-        stringify(&Node::Object(outer_map), &mut dest);
+        stringify(&Node::Object(outer_map), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "{\"outer_key\":{\"inner_key\":42}}");
     }
 
@@ -138,7 +152,7 @@ mod tests {
             Node::Object(obj),
             Node::None
         ]);
-        stringify(&array, &mut dest);
+        stringify(&array, &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[1.5,[\"nested\"],{\"key\":true},null]");
     }
 
@@ -147,7 +161,7 @@ mod tests {
         let mut dest = Buffer::new();
         let mut map = HashMap::new();
         map.insert("special\t\n".to_string(), Node::Str("value\u{0001}".to_string()));
-        stringify(&Node::Object(map), &mut dest);
+        stringify(&Node::Object(map), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "{\"special\\t\\n\":\"value\\u0001\"}");
     }
 
@@ -162,28 +176,28 @@ mod tests {
             Node::Number(Numeric::Int32(-2147483648)),
             Node::Number(Numeric::UInt32(4294967295))
         ]);
-        stringify(&array, &mut dest);
+        stringify(&array, &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[-42,42,42.42,255,-2147483648,4294967295]");
     }
 
     #[test]
     fn test_stringify_empty_array() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![]), &mut dest);
+        stringify(&Node::Array(vec![]), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[]");
     }
 
     #[test]
     fn test_stringify_empty_object() {
         let mut dest = Buffer::new();
-        stringify(&Node::Object(HashMap::new()), &mut dest);
+        stringify(&Node::Object(HashMap::new()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "{}");
     }
 
     #[test]
     fn test_stringify_control_chars() {
         let mut dest = Buffer::new();
-        stringify(&Node::Str("\u{0000}\u{001F}".to_string()), &mut dest);
+        stringify(&Node::Str("\u{0000}\u{001F}".to_string()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "\"\\u0000\\u001f\"");
     }
     

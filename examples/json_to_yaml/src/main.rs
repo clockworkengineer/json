@@ -29,7 +29,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
     ).map_err(|e| e.to_string())?;
 
     // Convert and write the parsed JSON to YAML format
-    to_yaml(&node, &mut destination);
+    to_yaml(&node, &mut destination).unwrap();
     Ok(())
 }
 

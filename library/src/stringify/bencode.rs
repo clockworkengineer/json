@@ -5,18 +5,14 @@
 use crate::nodes::node::*;
 use crate::io::traits::IDestination;
 
-/// Converts a Node into its bencode string representation and writes it to the destination.
+/// Serializes a `Node` into Bencode and writes it to the given destination.
 ///
 /// # Arguments
-/// * `node` - The Node to serialize
-/// * `destination` - The output destination implementing IDestination trait
 ///
-/// The bencode format specifies the following encoding rules:
-/// - Strings are encoded as <length>: <contents>
-/// - Integers are encoded as i<number>e
-/// - Lists are encoded as l<bencoded elements>e
-/// - Dictionaries are encoded as d<bencoded strings> <bencoded elements>e
-pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
+/// * `node` - The Bencode node to serialize.
+/// * `destination` - The destination to write the Bencode string to.
+
+pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String>{
     match node {
         Node::None => destination.add_bytes(""),
         Node::Boolean(value) => destination.add_bytes(if *value { "i1e" } else { "i0e" }),
@@ -37,7 +33,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
         Node::Array(items) => {
             destination.add_bytes("l");
             for item in items {
-                stringify(item, destination);
+                stringify(item, destination)?;
             }
             destination.add_bytes("e");
         },
@@ -46,12 +42,13 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) {
             let mut sorted_entries: Vec<_> = entries.iter().collect();
             sorted_entries.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             for (key, value) in sorted_entries {
-                stringify(&Node::Str(key.clone()), destination);
-                stringify(value, destination);
+                stringify(&Node::Str(key.clone()), destination)?;
+                stringify(value, destination)?;
             }
             destination.add_bytes("e");
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -65,52 +62,52 @@ mod tests {
     #[test]
     fn test_stringify_none() {
         let mut dest = Buffer::new();
-        stringify(&Node::None, &mut dest);
+        stringify(&Node::None, &mut dest).unwrap();
         assert_eq!(dest.to_string(), "");
     }
 
     #[test]
     fn test_stringify_boolean() {
         let mut dest = Buffer::new();
-        stringify(&Node::Boolean(true), &mut dest);
+        stringify(&Node::Boolean(true), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i1e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Boolean(false), &mut dest);
+        stringify(&Node::Boolean(false), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i0e");
     }
 
     #[test]
     fn test_stringify_numbers() {
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::Integer(-42)), &mut dest);
+        stringify(&Node::Number(Numeric::Integer(-42)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i-42e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::UInteger(42)), &mut dest);
+        stringify(&Node::Number(Numeric::UInteger(42)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i42e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::Float(42.7)), &mut dest);
+        stringify(&Node::Number(Numeric::Float(42.7)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i43e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::Byte(255)), &mut dest);
+        stringify(&Node::Number(Numeric::Byte(255)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i255e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::Int32(-2147483648)), &mut dest);
+        stringify(&Node::Number(Numeric::Int32(-2147483648)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i-2147483648e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Number(Numeric::UInt32(4294967295)), &mut dest);
+        stringify(&Node::Number(Numeric::UInt32(4294967295)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "i4294967295e");
     }
 
     #[test]
     fn test_stringify_string() {
         let mut dest = Buffer::new();
-        stringify(&Node::Str("test".to_string()), &mut dest);
+        stringify(&Node::Str("test".to_string()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "4:test");
     }
 
@@ -120,11 +117,11 @@ mod tests {
         stringify(&Node::Array(vec![
             Node::Number(Numeric::Integer(1)),
             Node::Str("test".to_string()),
-        ]), &mut dest);
+        ]), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "li1e4:teste");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![]), &mut dest);
+        stringify(&Node::Array(vec![]), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "le");
     }
 
@@ -134,18 +131,18 @@ mod tests {
         let mut map = HashMap::new();
         map.insert("b".to_string(), Node::Str("value1".to_string()));
         map.insert("a".to_string(), Node::Str("value2".to_string()));
-        stringify(&Node::Object(map), &mut dest);
+        stringify(&Node::Object(map), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "d1:a6:value21:b6:value1e");
 
         let mut dest = Buffer::new();
-        stringify(&Node::Object(HashMap::new()), &mut dest);
+        stringify(&Node::Object(HashMap::new()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "de");
     }
 
     #[test]
     fn test_stringify_empty_string() {
         let mut dest = Buffer::new();
-        stringify(&Node::Str("".to_string()), &mut dest);
+        stringify(&Node::Str("".to_string()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "0:");
     }
 
@@ -157,7 +154,7 @@ mod tests {
         outer_map.insert("empty_object".to_string(), Node::Object(inner_map));
         outer_map.insert("empty_array".to_string(), Node::Array(vec![]));
         outer_map.insert("empty_string".to_string(), Node::Str("".to_string()));
-        stringify(&Node::Object(outer_map), &mut dest);
+        stringify(&Node::Object(outer_map), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "d11:empty_arrayle12:empty_objectde12:empty_string0:e");
     }
     #[test]

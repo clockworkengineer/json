@@ -1,7 +1,16 @@
 use crate::io::traits::IDestination;
 use crate::{Node, Numeric};
 
-
+/// Writes a TOML value to the given destination.
+///
+/// This function serializes a `Node` (representing a TOML value) and writes its TOML representation
+/// to the provided `IDestination`. It handles all TOML value types, including strings, numbers,
+/// booleans, arrays, and nulls. Objects are handled separately and are not written by this function.
+///
+/// # Arguments
+/// * `value` - The TOML node to serialize.
+/// * `destination` - The output destination implementing `IDestination`.
+/// 
 fn write_value(value: &Node, destination: &mut dyn IDestination) {
     match value {
         Node::Str(s) => {
@@ -43,6 +52,16 @@ fn write_value(value: &Node, destination: &mut dyn IDestination) {
     }
 }
 
+/// Writes a TOML table (object) to the given destination.
+///
+/// This function serializes a `Node::Object` (representing a TOML table) and writes its TOML
+/// representation to the provided `IDestination`. Nested objects are handled recursively,
+/// with section headers generated for each nested table.
+///
+/// # Arguments
+/// * `prefix` - The current key prefix for nested tables (empty for root).
+/// * `obj` - The TOML node expected to be an object.
+/// * `destination` - The output destination implementing `IDestination`.
 fn write_table(prefix: &str, obj: &Node, destination: &mut dyn IDestination) {
     if let Node::Object(map) = obj {
         for (key, value) in map {
@@ -66,9 +85,6 @@ fn write_table(prefix: &str, obj: &Node, destination: &mut dyn IDestination) {
     }
 }
 
-
-
-
 /// Converts a JSON node to TOML format and writes it to the destination
 ///
 /// # Arguments
@@ -91,8 +107,6 @@ mod tests {
     use super::*;
     use crate::BufferDestination;
     use std::collections::{HashMap};
-
-
 
     #[test]
     fn test_stringify_array() {

@@ -68,7 +68,7 @@ fn write_sequence(file_path: &Path, sequence: &Node) -> Result<(), String> {
     // Create a new file destination, falling back to empty string if the path is invalid
     let  file = FileDestination::new(file_path.to_str().unwrap_or(""));
     match file {
-        Ok(mut f) => { stringify(&sequence, &mut f); Ok(()) }
+        Ok(mut f) => { stringify(&sequence, &mut f).unwrap(); Ok(()) }
         Err(e) => { Err( e.to_string())}
     }
 }

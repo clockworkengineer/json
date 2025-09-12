@@ -25,7 +25,7 @@ fn process_json_file(file_path: &str) -> Result<(), String> {
     ).map_err(|e| e.to_string())?;
 
     // Convert and write the parsed JSON to bencode format
-    to_bencode(&node, &mut destination);
+    to_bencode(&node, &mut destination)?;
     Ok(())
 }
 
