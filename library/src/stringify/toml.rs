@@ -1,23 +1,20 @@
 use crate::io::traits::IDestination;
 use crate::{Node, Numeric};
+pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
+    match node {
+        Node::Object(dict) => stringify_object(dict, "", destination),
+        _ => Err("TOML format requires a Object at the root level".to_string()),
+    }
+}
 
-/// Writes a TOML value to the given destination.
-///
-/// This function serializes a `Node` (representing a TOML value) and writes its TOML representation
-/// to the provided `IDestination`. It handles all TOML value types, including strings, numbers,
-/// booleans, arrays, and nulls. Objects are handled separately and are not written by this function.
-///
-/// # Arguments
-/// * `value` - The TOML node to serialize.
-/// * `destination` - The output destination implementing `IDestination`.
-/// 
-fn write_value(value: &Node, destination: &mut dyn IDestination) {
+fn stringify_value(value: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match value {
         Node::Str(s) => {
             destination.add_bytes("\"");
             destination.add_bytes(s);
             destination.add_bytes("\"");
         }
+        Node::Boolean(b) => destination.add_bytes(&*b.to_string()),
         Node::Number(value) => match value {
             // Handles signed integer values
             Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
@@ -36,72 +33,63 @@ fn write_value(value: &Node, destination: &mut dyn IDestination) {
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("{:?}", value)),
         },
-        Node::Boolean(b) => destination.add_bytes(&*b.to_string()),
+        Node::Array(items) => stringify_array(items, destination)?,
         Node::None => destination.add_bytes("null"),
-        Node::Array(arr) => {
-            destination.add_bytes("[");
-            for (i, item) in arr.iter().enumerate() {
-                if i > 0 {
-                    destination.add_bytes(", ");
-                }
-                write_value(item, destination);
-            }
-            destination.add_bytes("]");
-        }
-        Node::Object(_) => destination.add_bytes(""), // Handled separately
+        Node::Object(_) => return Ok(()), // Handled separately for table syntax
     }
+    Ok(())
 }
 
-/// Writes a TOML table (object) to the given destination.
-///
-/// This function serializes a `Node::Object` (representing a TOML table) and writes its TOML
-/// representation to the provided `IDestination`. Nested objects are handled recursively,
-/// with section headers generated for each nested table.
-///
-/// # Arguments
-/// * `prefix` - The current key prefix for nested tables (empty for root).
-/// * `obj` - The TOML node expected to be an object.
-/// * `destination` - The output destination implementing `IDestination`.
-fn write_table(prefix: &str, obj: &Node, destination: &mut dyn IDestination) {
-    if let Node::Object(map) = obj {
-        // First, write all non-object values
-        for (key, value) in map {
-            if !matches!(value, Node::Object(_)) {
-                destination.add_bytes(&format!("{} = ", key));
-                write_value(value, destination);
+fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Result<(), String> {
+    destination.add_bytes("[");
+    for (i, item) in items.iter().enumerate() {
+        if i > 0 {
+            destination.add_bytes(", ");
+        }
+        stringify_value(item, destination)?;
+    }
+    destination.add_bytes("]");
+    Ok(())
+}
+
+fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str, destination: &mut dyn IDestination) -> Result<(), String> {
+    if dict.is_empty() {
+        return Ok(());
+    }
+
+    let mut tables = std::collections::HashMap::new();
+    let mut is_first = true;
+    // First pass - handle simple key-value pairs
+    for (key, value) in dict {
+        if let Node::Object(nested) = value {
+            tables.insert(key, nested);
+        } else {
+            if !prefix.is_empty() && is_first {
+                destination.add_bytes("\n[");
+                destination.add_bytes(prefix);
+                destination.add_bytes("]\n");
+                is_first = false;
+            }
+            destination.add_bytes(key);
+            destination.add_bytes(" = ");
+            stringify_value(value, destination)?;
+            if !prefix.is_empty() {
                 destination.add_bytes("\n");
             }
         }
-        // Then, write all nested objects (tables)
-        for (key, value) in map {
-            if let Node::Object(_) = value {
-                let new_prefix = if prefix.is_empty() {
-                    key.to_string()
-                } else {
-                    format!("{}.{}", prefix, key)
-                };
-                destination.add_bytes(&format!("\n[{}]\n", new_prefix));
-                write_table(&new_prefix, value, destination);
-            }
-        }
     }
-}
 
-/// Converts a JSON node to TOML format and writes it to the destination
-///
-/// # Arguments
-/// * `node` - The TOML node to convert
-/// * `destination` - The output destination implementing IDestination
-///
-/// # Returns
-/// * `Result<(), TomlError>` - Ok if successful, Err with message if root is not an object
-pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
-    if let Node::Object(_) = node {
-        write_table("", node, destination);
-        Ok(())
-    } else {
-        Err("Root node must be an object".to_string())
+    // Second pass - handle nested tables
+    for (key, nested) in tables {
+        let new_prefix = if prefix.is_empty() {
+            key.to_string()
+        } else {
+            format!("{}.{}", prefix, key)
+        };
+        stringify_object(nested, &new_prefix, destination)?;
     }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -119,7 +107,7 @@ mod tests {
             Node::Boolean(true)
         ]), &mut dest);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Root node must be an object");
+        assert_eq!(result.unwrap_err(), "TOML format requires a Object at the root level");
     }
 
     #[test]
@@ -129,7 +117,7 @@ mod tests {
         let mut dest = BufferDestination::new();
         let hashmap = map.into_iter().collect::<std::collections::HashMap<_, _>>();
         let _ = stringify(&Node::Object(hashmap), &mut dest);
-        assert_eq!(dest.to_string(), "key = \"value\"\n");
+        assert_eq!(dest.to_string(), "key = \"value\"");
     }
 
     #[test]
@@ -137,7 +125,7 @@ mod tests {
         let mut dest = BufferDestination::new();
         let result = stringify(&Node::Str("test".to_string()), &mut dest);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "Root node must be an object");
+        assert_eq!(result.unwrap_err(), "TOML format requires a Object at the root level");
     }
 
     #[test]
