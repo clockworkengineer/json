@@ -7,37 +7,47 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
     }
 }
 
+fn stringify_str(s: &str, destination: &mut dyn IDestination) {
+    destination.add_bytes("\"");
+    destination.add_bytes(s);
+    destination.add_bytes("\"");
+}
+
 fn stringify_value(value: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match value {
-        Node::Str(s) => {
-            destination.add_bytes("\"");
-            destination.add_bytes(s);
-            destination.add_bytes("\"");
-        }
-        Node::Boolean(b) => destination.add_bytes(&*b.to_string()),
-        Node::Number(value) => match value {
-            // Handles signed integer values
-            Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
-            // Handles unsigned integer values
-            Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
-            // Handles floating point numbers
-            Numeric::Float(f) => destination.add_bytes(&f.to_string()),
-            // Handles 8-bit unsigned values (0-255)
-            Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
-            // Handles 32-bit signed integers (-2^31 to 2^31-1)
-            Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
-            // Handles 32-bit unsigned integers (0 to 2^32-1)
-            Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
-            // Fallback for any future numeric variants
-            // If there are any other variants, add them here
-            #[allow(unreachable_patterns)]
-            _ => destination.add_bytes(&format!("{:?}", value)),
-        },
+        Node::Str(s) => stringify_str(s, destination),
+        Node::Boolean(b) => stringify_bool(b, destination),
+        Node::Number(value) => stringify_number(value, destination),
         Node::Array(items) => stringify_array(items, destination)?,
         Node::None => destination.add_bytes("null"),
         Node::Object(_) => return Ok(()), // Handled separately for table syntax
     }
     Ok(())
+}
+
+fn stringify_bool(b: &bool, destination: &mut dyn IDestination) {
+    destination.add_bytes(&*b.to_string())
+}
+
+fn stringify_number(value: &Numeric, destination: &mut dyn IDestination) {
+    match value {
+        // Handles signed integer values
+        Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
+        // Handles unsigned integer values
+        Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
+        // Handles floating point numbers
+        Numeric::Float(f) => destination.add_bytes(&f.to_string()),
+        // Handles 8-bit unsigned values (0-255)
+        Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
+        // Handles 32-bit signed integers (-2^31 to 2^31-1)
+        Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
+        // Handles 32-bit unsigned integers (0 to 2^32-1)
+        Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
+        // Fallback for any future numeric variants
+        // If there are any other variants, add them here
+        #[allow(unreachable_patterns)]
+        _ => destination.add_bytes(&format!("{:?}", value)),
+    }
 }
 
 fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Result<(), String> {
@@ -167,28 +177,26 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_stringify_object_with_multiple_nested_tables_and_values() {
-    //     let mut address = HashMap::new();
-    //     address.insert("city".to_string(), Node::Str("Paris".to_string()));
-    //     address.insert("zip".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(75000)));
+    #[test]
+    fn test_stringify_object_with_multiple_nested_tables_and_values() {
+        let mut address = HashMap::new();
+        address.insert("city".to_string(), Node::Str("Paris".to_string()));
+        address.insert("zip".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(75000)));
 
-    //     let mut profile = HashMap::new();
-    //     profile.insert("name".to_string(), Node::Str("Alice".to_string()));
-    //     profile.insert("age".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(30)));
-    //     profile.insert("address".to_string(), Node::Object(address));
+        let mut profile = HashMap::new();
+        profile.insert("name".to_string(), Node::Str("Alice".to_string()));
+        profile.insert("age".to_string(), Node::Number(crate::nodes::node::Numeric::Integer(30)));
+        profile.insert("address".to_string(), Node::Object(address));
 
-    //     let mut root = HashMap::new();
-    //     root.insert("profile".to_string(), Node::Object(profile));
-    //     root.insert("active".to_string(), Node::Boolean(true));
+        let mut root = HashMap::new();
+        root.insert("profile".to_string(), Node::Object(profile));
+        root.insert("active".to_string(), Node::Boolean(true));
 
-    //     let mut dest = BufferDestination::new();
-    //     stringify(&Node::Object(root), &mut dest).unwrap();
-    //     assert_eq!(
-    //         dest.to_string(),
-    //         "active = true\n\n[profile]\nname = \"Alice\"\nage = 30\n\n[profile.address]\ncity = \"Paris\"\nzip = 75000\n"
-    //     );
-    // }
-
-// ...existing code...
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "active = true\n\n[profile]\nname = \"Alice\"\nage = 30\n\n[profile.address]\ncity = \"Paris\"\nzip = 75000\n"
+        );
+    }
 }
