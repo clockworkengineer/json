@@ -237,7 +237,82 @@ mod tests {
             dest.to_string(),
             "active = true\n[profile]\nage = 30\nname = \"Alice\"\n[profile.address]\ncity = \"Paris\"\nzip = 75000\n"
         );
+    }
 
+    #[test]
+    fn test_stringify_simple_array_of_tables() {
+        let mut table1 = HashMap::new();
+        table1.insert("name".to_string(), Node::Str("First".to_string()));
+        let mut table2 = HashMap::new();
+        table2.insert("name".to_string(), Node::Str("Second".to_string()));
+
+        let array = vec![Node::Object(table1), Node::Object(table2)];
+        let mut root = HashMap::new();
+        root.insert("items".to_string(), Node::Array(array));
+
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "[[items]]\nname = \"First\"\n[[items]]\nname = \"Second\"\n"
+        );
+    }
+
+    #[test]
+    fn test_stringify_nested_array_of_tables() {
+        let mut batter1 = HashMap::new();
+        batter1.insert("id".to_string(), Node::Str("1001".to_string()));
+        batter1.insert("type".to_string(), Node::Str("Regular".to_string()));
+
+        let mut batter2 = HashMap::new();
+        batter2.insert("id".to_string(), Node::Str("1002".to_string()));
+        batter2.insert("type".to_string(), Node::Str("Chocolate".to_string()));
+
+        let batters = vec![Node::Object(batter1), Node::Object(batter2)];
+        let mut batters_obj = HashMap::new();
+        batters_obj.insert("batter".to_string(), Node::Array(batters));
+
+        let mut item = HashMap::new();
+        item.insert("batters".to_string(), Node::Object(batters_obj));
+        item.insert("name".to_string(), Node::Str("Cake".to_string()));
+
+        let items = vec![Node::Object(item)];
+        let mut root = HashMap::new();
+        root.insert("items".to_string(), Node::Array(items));
+
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "[[items]]\nname = \"Cake\"\n[[items.batters.batter]]\nid = \"1001\"\ntype = \"Regular\"\n[[items.batters.batter]]\nid = \"1002\"\ntype = \"Chocolate\"\n"
+        );
+    }
+
+    #[test]
+    fn test_stringify_complex_array_of_tables() {
+        let mut code1 = HashMap::new();
+        code1.insert("hex".to_string(), Node::Str("#000".to_string()));
+        code1.insert("rgba".to_string(), Node::Array(vec![
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(1))
+        ]));
+
+        let mut color1 = HashMap::new();
+        color1.insert("name".to_string(), Node::Str("black".to_string()));
+        color1.insert("code".to_string(), Node::Object(code1));
+
+        let colors = vec![Node::Object(color1)];
+        let mut root = HashMap::new();
+        root.insert("colors".to_string(), Node::Array(colors));
+
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
+        );
     }
 
 }
