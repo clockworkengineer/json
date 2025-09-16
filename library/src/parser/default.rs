@@ -551,6 +551,23 @@ mod tests {
         let mut source = Buffer::new(b"\"\\u0048\\u0065\\u006c\\u006c\\u006f\"");
         assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "Hello"));
     }
+    #[test]
+    fn test_string_unicode_escapes_mixed() {
+        let mut source = Buffer::new(b"\"Hello, \\u0057\\u006f\\u0072\\u006c\\u0064!\"");
+        assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "Hello, World!"));
+    }
+    #[test]
+    fn test_string_unicode_escapes_invalid() {
+        let mut source = Buffer::new(b"\"\\u00\"");
+        assert!(parse(&mut source).is_err());
+    }
+    #[test]
+    fn test_string_unicode_escapes_invalid_hex() {
+        let mut source = Buffer::new(b"\"\\u00zz\"");
+        assert!(parse(&mut source).is_err());
+    }
+
+
     
 }
 
