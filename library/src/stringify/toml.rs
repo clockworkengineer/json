@@ -70,32 +70,72 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
 
     let dict_sorted: BTreeMap<_, _> = dict.iter().collect();
     let mut tables = BTreeMap::new();
+    let mut array_tables = BTreeMap::new();
     let mut is_first = true;
-    // First pass - handle simple key-value pairs
+
+    // First pass - handle simple key-value pairs and collect tables
     for (key, value) in dict_sorted {
-        if let Node::Object(nested) = value {
-            tables.insert(key, nested);
-        } else {
-            if !prefix.is_empty() && is_first {
-                destination.add_bytes("[");
-                destination.add_bytes(prefix);
-                destination.add_bytes("]\n");
-                is_first = false;
+        match value {
+            Node::Object(nested) => {
+                tables.insert(key, nested);
             }
-            destination.add_bytes(key);
-            destination.add_bytes(" = ");
-            stringify_value(value, destination)?;
+            Node::Array(items) if items.iter().all(|item| matches!(item, Node::Object(_))) => {
+                // Collect arrays of tables
+                array_tables.insert(key, items);
+            }
+            _ => {
+                if !prefix.is_empty() && is_first {
+                    destination.add_bytes("[");
+                    destination.add_bytes(prefix);
+                    destination.add_bytes("]\n");
+                    is_first = false;
+                }
+                destination.add_bytes(key);
+                destination.add_bytes(" = ");
+                stringify_value(value, destination)?;
+            }
         }
     }
 
     // Second pass - handle nested tables
-    for (key, nested) in tables.iter() {
+    for (key, nested) in tables {
         let new_prefix = if prefix.is_empty() {
             key.to_string()
         } else {
             format!("{}.{}", prefix, key)
         };
         stringify_object(nested, &new_prefix, destination)?;
+    }
+
+    // Third pass - handle arrays of tables
+    for (key, items) in array_tables {
+        for item in items {
+            if let Node::Object(nested) = item {
+                let new_prefix = if prefix.is_empty() {
+                    key.to_string()
+                } else {
+                    format!("{}.{}", prefix, key)
+                };
+                destination.add_bytes("[[");
+                destination.add_bytes(&new_prefix);
+                destination.add_bytes("]]\n");
+                // Process the table contents
+                for (inner_key, inner_value) in nested {
+                    if !matches!(inner_value, Node::Object(_)) {
+                        destination.add_bytes(inner_key);
+                        destination.add_bytes(" = ");
+                        stringify_value(inner_value, destination)?;
+                    }
+                }
+                // Process nested tables within array tables
+                for (inner_key, inner_value) in nested {
+                    if let Node::Object(inner_nested) = inner_value {
+                        let inner_prefix = format!("{}.{}", new_prefix, inner_key);
+                        stringify_object(&inner_nested, &inner_prefix, destination)?;
+                    }
+                }
+            }
+        }
     }
 
     Ok(())
