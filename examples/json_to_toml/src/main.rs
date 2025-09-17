@@ -1,7 +1,8 @@
-use std::path::Path;
 // Import the necessary types and functions from json_lib and json_utility_lib
-use json_lib::{FileSource, parse, FileDestination, to_toml};
+use json_lib::{parse, to_toml, FileDestination, FileSource};
 use json_utility_lib::get_json_file_list;
+use std::fs;
+use std::path::Path;
 
 /// Processes a single JSON file by converting it to TOML format.
 ///
@@ -39,7 +40,10 @@ fn main() {
         // Attempt to convert each file and handle any errors
         match process_json_file(&file_path) {
             Ok(()) => println!("Successfully converted {}", file_path),
-            Err(e) => eprintln!("Failed to convert {}: {}", file_path, e),
+            Err(e) => {
+                eprintln!("Failed to convert {}: {}", file_path, e);
+                fs::remove_file(file_path).unwrap();
+            }
         }
     }
 }
