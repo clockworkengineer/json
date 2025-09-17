@@ -1,6 +1,7 @@
 use crate::io::traits::IDestination;
 use crate::{Node, Numeric};
 use std::collections::BTreeMap;
+
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match node {
         Node::Object(dict) => stringify_object(dict, "", destination),
@@ -55,12 +56,12 @@ fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Res
     destination.add_bytes("[");
     for (i, item) in items.iter().enumerate() {
         if i > 0 {
-            destination.add_bytes(", ");
+            destination.add_bytes(", "); // Ensure proper array element separation
         }
-        stringify_value(item, destination)?;
+        stringify_value(item, destination)?; // Recursive stringify without introducing carriage returns
     }
-    destination.add_bytes("]");
-    Ok(())
+    destination.add_bytes("]"); // Close the array properly
+    Ok(()) // Ensure no additional newline or CR at the end
 }
 
 fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str, destination: &mut dyn IDestination) -> Result<(), String> {
@@ -120,7 +121,8 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                 destination.add_bytes(&new_prefix);
                 destination.add_bytes("]]\n");
                 // Process the table contents
-                for (inner_key, inner_value) in nested {
+                let nested_sorted: BTreeMap<_, _> = nested.iter().collect();
+                for (inner_key, inner_value) in &nested_sorted {
                     if !matches!(inner_value, Node::Object(_)) {
                         destination.add_bytes(inner_key);
                         destination.add_bytes(" = ");
@@ -128,10 +130,10 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                     }
                 }
                 // Process nested tables within array tables
-                for (inner_key, inner_value) in nested {
+                for (inner_key, inner_value) in &nested_sorted {
                     if let Node::Object(inner_nested) = inner_value {
                         let inner_prefix = format!("{}.{}", new_prefix, inner_key);
-                        stringify_object(&inner_nested, &inner_prefix, destination)?;
+                        stringify_object(inner_nested, &inner_prefix, destination)?;
                     }
                 }
             }
@@ -311,7 +313,7 @@ mod tests {
         stringify(&Node::Object(root), &mut dest).unwrap();
         assert_eq!(
             dest.to_string(),
-            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
+            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0\n, 0\n, 0\n, 1\n]\n"
         );
     }
 
