@@ -95,6 +95,18 @@ fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Res
     destination.add_bytes("]");
     Ok(())
 }
+fn stringify_header(prefix: &str, destination: &mut dyn IDestination, is_first: &mut bool, key: &String, value: &Node) -> Result<(), String> {
+    if !prefix.is_empty() && *is_first {
+        destination.add_bytes("[");
+        destination.add_bytes(prefix);
+        destination.add_bytes("]\n");
+        *is_first = false;
+    }
+    destination.add_bytes(key);
+    destination.add_bytes(" = ");
+    stringify_value(value, true, destination)?;
+    Ok(())
+}
 
 fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str, destination: &mut dyn IDestination) -> Result<(), String> {
     if dict.is_empty() {
@@ -106,7 +118,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     let mut array_tables = BTreeMap::new();
     let mut is_first = true;
 
-    // First pass - handle simple key-value pairs and collect tables
+    // First pass - handle simple key-value pairs and collect tables/arrays of tables
     for (key, value) in dict_sorted {
         match value {
             Node::Object(nested) => {
@@ -117,27 +129,11 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                     // Collect arrays of tables
                     array_tables.insert(key, items);
                 } else {
-                    if !prefix.is_empty() && is_first {
-                        destination.add_bytes("[");
-                        destination.add_bytes(prefix);
-                        destination.add_bytes("]\n");
-                        is_first = false;
-                    }
-                    destination.add_bytes(key);
-                    destination.add_bytes(" = ");
-                    stringify_value(value, true, destination)?;
+                    stringify_header(prefix, destination, &mut is_first, key, value)?;
                 }
             }
             _ => {
-                if !prefix.is_empty() && is_first {
-                    destination.add_bytes("[");
-                    destination.add_bytes(prefix);
-                    destination.add_bytes("]\n");
-                    is_first = false;
-                }
-                destination.add_bytes(key);
-                destination.add_bytes(" = ");
-                stringify_value(value, true, destination)?;
+                stringify_header(prefix, destination, &mut is_first, key, value)?;
             }
         }
     }
@@ -193,6 +189,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
 
     Ok(())
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -367,5 +364,6 @@ mod tests {
             "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
         );
     }
+
 
 }
