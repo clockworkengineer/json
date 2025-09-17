@@ -9,7 +9,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
     }
 }
 
-fn stringify_value(value: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
+fn stringify_value(value: &Node, add_cr: bool, destination: &mut dyn IDestination) -> Result<(), String> {
     match value {
         Node::Str(s) => stringify_str(s, destination),
         Node::Boolean(b) => stringify_bool(b, destination),
@@ -18,7 +18,9 @@ fn stringify_value(value: &Node, destination: &mut dyn IDestination) -> Result<(
         Node::None => destination.add_bytes("null"),
         Node::Object(_) => return Ok(()), // Handled separately for table syntax
     }
-    destination.add_bytes("\n");
+    if add_cr {
+        destination.add_bytes("\n");
+    }
     Ok(())
 }
 fn stringify_str(s: &str, destination: &mut dyn IDestination) {
@@ -58,7 +60,7 @@ fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Res
         if i > 0 {
             destination.add_bytes(", "); // Ensure proper array element separation
         }
-        stringify_value(item, destination)?; // Recursive stringify without introducing carriage returns
+        stringify_value(item, false, destination)?; // Recursive stringify without introducing carriage returns
     }
     destination.add_bytes("]"); // Close the array properly
     Ok(()) // Ensure no additional newline or CR at the end
@@ -80,9 +82,21 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
             Node::Object(nested) => {
                 tables.insert(key, nested);
             }
-            Node::Array(items) if items.iter().all(|item| matches!(item, Node::Object(_))) => {
-                // Collect arrays of tables
-                array_tables.insert(key, items);
+            Node::Array(items) => {
+                if items.iter().all(|item| matches!(item, Node::Object(_))) {
+                    // Collect arrays of tables
+                    array_tables.insert(key, items);
+                } else {
+                    if !prefix.is_empty() && is_first {
+                        destination.add_bytes("[");
+                        destination.add_bytes(prefix);
+                        destination.add_bytes("]\n");
+                        is_first = false;
+                    }
+                    destination.add_bytes(key);
+                    destination.add_bytes(" = ");
+                    stringify_value(value, true, destination)?;
+                }
             }
             _ => {
                 if !prefix.is_empty() && is_first {
@@ -93,7 +107,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                 }
                 destination.add_bytes(key);
                 destination.add_bytes(" = ");
-                stringify_value(value, destination)?;
+                stringify_value(value, true, destination)?;
             }
         }
     }
@@ -109,7 +123,8 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     }
 
     // Third pass - handle arrays of tables
-    for (key, items) in array_tables {
+    let array_tables_sorted: BTreeMap<_, _> = array_tables.into_iter().collect();
+    for (key, items) in array_tables_sorted {
         for item in items {
             if let Node::Object(nested) = item {
                 let new_prefix = if prefix.is_empty() {
@@ -120,20 +135,26 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                 destination.add_bytes("[[");
                 destination.add_bytes(&new_prefix);
                 destination.add_bytes("]]\n");
-                // Process the table contents
                 let nested_sorted: BTreeMap<_, _> = nested.iter().collect();
                 for (inner_key, inner_value) in &nested_sorted {
-                    if !matches!(inner_value, Node::Object(_)) {
-                        destination.add_bytes(inner_key);
-                        destination.add_bytes(" = ");
-                        stringify_value(inner_value, destination)?;
-                    }
-                }
-                // Process nested tables within array tables
-                for (inner_key, inner_value) in &nested_sorted {
-                    if let Node::Object(inner_nested) = inner_value {
-                        let inner_prefix = format!("{}.{}", new_prefix, inner_key);
-                        stringify_object(inner_nested, &inner_prefix, destination)?;
+                    match inner_value {
+                        Node::Object(inner_nested) => {
+                            let inner_prefix = format!("{}.{}", new_prefix, inner_key);
+                            stringify_object(inner_nested, &inner_prefix, destination)?;
+                        }
+                        Node::Array(inner_items) if inner_items.iter().all(|item| matches!(item, Node::Object(_))) => {
+                            for inner_item in inner_items {
+                                if let Node::Object(deepest) = inner_item {
+                                    let inner_prefix = format!("{}.{}", new_prefix, inner_key);
+                                    stringify_object(deepest, &inner_prefix, destination)?;
+                                }
+                            }
+                        }
+                        _ => {
+                            destination.add_bytes(inner_key);
+                            destination.add_bytes(" = ");
+                            stringify_value(inner_value, true, destination)?;
+                        }
                     }
                 }
             }
@@ -313,7 +334,7 @@ mod tests {
         stringify(&Node::Object(root), &mut dest).unwrap();
         assert_eq!(
             dest.to_string(),
-            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0\n, 0\n, 0\n, 1\n]\n"
+            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
         );
     }
 
