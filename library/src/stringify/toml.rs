@@ -55,15 +55,45 @@ fn stringify_number(value: &Numeric, destination: &mut dyn IDestination) {
 }
 
 fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Result<(), String> {
+    if items.is_empty() {
+        destination.add_bytes("[]");
+        return Ok(());
+    }
+
+    // Check first item's type
+    let first_type = match &items[0] {
+        Node::Str(_) => "string",
+        Node::Boolean(_) => "boolean",
+        Node::Number(_) => "number",
+        Node::Array(_) => "array",
+        Node::Object(_) => "object",
+        Node::None => "null"
+    };
+
+    // Validate all items are same type
+    for item in items {
+        let item_type = match item {
+            Node::Str(_) => "string",
+            Node::Boolean(_) => "boolean",
+            Node::Number(_) => "number",
+            Node::Array(_) => "array",
+            Node::Object(_) => "object",
+            Node::None => "null"
+        };
+        if item_type != first_type {
+            return Err("TOML arrays must contain elements of the same type".to_string());
+        }
+    }
+
     destination.add_bytes("[");
     for (i, item) in items.iter().enumerate() {
         if i > 0 {
-            destination.add_bytes(", "); // Ensure proper array element separation
+            destination.add_bytes(", ");
         }
-        stringify_value(item, false, destination)?; // Recursive stringify without introducing carriage returns
+        stringify_value(item, false, destination)?;
     }
-    destination.add_bytes("]"); // Close the array properly
-    Ok(()) // Ensure no additional newline or CR at the end
+    destination.add_bytes("]");
+    Ok(())
 }
 
 fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str, destination: &mut dyn IDestination) -> Result<(), String> {

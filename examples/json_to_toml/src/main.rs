@@ -42,7 +42,8 @@ fn main() {
             Ok(()) => println!("Successfully converted {}", file_path),
             Err(e) => {
                 eprintln!("Failed to convert {}: {}", file_path, e);
-                fs::remove_file(file_path).unwrap();
+                let toml_file = file_path.replace(".json", ".toml");
+                fs::remove_file(toml_file).unwrap();
             }
         }
     }
