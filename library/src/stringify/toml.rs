@@ -116,7 +116,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     let dict_sorted: BTreeMap<_, _> = dict.iter().collect();
     let mut tables = BTreeMap::new();
     let mut array_tables = BTreeMap::new();
-    let mut simple_values: BTreeMap<&String, &Node> = BTreeMap::new();
+    // let mut simple_values: BTreeMap<&String, &Node> = BTreeMap::new();
     let mut is_first = true;
 
     // First pass - handle simple key-value pairs and collect tables/arrays of tables
@@ -134,17 +134,17 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                 }
             }
             _ => {
-                simple_values.insert(key, value);
+                stringify_header(prefix, destination, &mut is_first, key, value)?;
             }
         }
     }
 
     // First pass - handle simple values
 
-    let simple_values_sorted: BTreeMap<_, _> = simple_values.into_iter().collect();
-    for (key, value) in simple_values_sorted {
-        stringify_header(prefix, destination, &mut is_first, key, value)?;
-    }
+    // let simple_values_sorted: BTreeMap<_, _> = simple_values.into_iter().collect();
+    // for (key, value) in simple_values_sorted {
+    //     stringify_header(prefix, destination, &mut is_first, key, value)?;
+    // }
 
     // Second pass - handle nested tables
     for (key, nested) in tables {
