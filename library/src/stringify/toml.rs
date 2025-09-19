@@ -116,6 +116,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     let dict_sorted: BTreeMap<_, _> = dict.iter().collect();
     let mut tables = BTreeMap::new();
     let mut array_tables = BTreeMap::new();
+    let mut simple_values: BTreeMap<&String, &Node> = BTreeMap::new();
     let mut is_first = true;
 
     // First pass - handle simple key-value pairs and collect tables/arrays of tables
@@ -133,9 +134,14 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                 }
             }
             _ => {
-                stringify_header(prefix, destination, &mut is_first, key, value)?;
+                simple_values.insert(key, value);
             }
         }
+    }
+
+    // First pass - handle simple values
+    for (key, value) in simple_values {
+        stringify_header(prefix, destination, &mut is_first, key, value)?;
     }
 
     // Second pass - handle nested tables
@@ -164,6 +170,20 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                 let nested_sorted: BTreeMap<_, _> = nested.iter().collect();
                 for (inner_key, inner_value) in &nested_sorted {
                     match inner_value {
+                        Node::Object(_) => {
+                        }
+                        Node::Array(_) => {
+                        }
+                        _ => {
+                            destination.add_bytes(inner_key);
+                            destination.add_bytes(" = ");
+                            stringify_value(inner_value, true, destination)?;
+                        }
+                    }
+                }
+
+                for (inner_key, inner_value) in &nested_sorted {
+                    match inner_value {
                         Node::Object(inner_nested) => {
                             let inner_prefix = format!("{}.{}", new_prefix, inner_key);
                             stringify_object(inner_nested, &inner_prefix, destination)?;
@@ -177,9 +197,9 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                             }
                         }
                         _ => {
-                            destination.add_bytes(inner_key);
-                            destination.add_bytes(" = ");
-                            stringify_value(inner_value, true, destination)?;
+                            // destination.add_bytes(inner_key);
+                            // destination.add_bytes(" = ");
+                            // stringify_value(inner_value, true, destination)?;
                         }
                     }
                 }
@@ -194,7 +214,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::BufferDestination;
+    use crate::{BufferDestination, BufferSource};
     use std::collections::{HashMap};
 
     #[test]
@@ -307,63 +327,72 @@ mod tests {
             "[[items]]\nname = \"First\"\n[[items]]\nname = \"Second\"\n"
         );
     }
+    #[test]
+    fn test_stringify_table() {
+        let mut source = BufferSource::new(
+            "{\r\n    \"colors\": [\r\n        {\r\n            \"color\": \"black\",\r\n            \"category\": \"hue\",\r\n            \"type\": \"primary\",\r\n            \"code\": {\r\n                \"rgba\": [\r\n                    255,\r\n                    255,\r\n                    255,\r\n                    1\r\n                ],\r\n                \"hex\": \"#000\"\r\n            }\r\n        }\r\n    ]\r\n}".as_bytes()
+        );
+        let node = crate::parse(&mut source).unwrap();
+        let mut dest = BufferDestination::new();
+        stringify(&node, &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "[[colors]]\ncategory = \"hue\"\ncolor = \"black\"\ntype = \"primary\"\n[colors.code]\nrgba = [255, 255, 255, 1]\nhex = \"#000\"\n");
+    }
+    #[test]
+    fn test_stringify_nested_array_of_tables() {
+        let mut batter1 = HashMap::new();
+        batter1.insert("id".to_string(), Node::Str("1001".to_string()));
+        batter1.insert("type".to_string(), Node::Str("Regular".to_string()));
 
-    // #[test]
-    // fn test_stringify_nested_array_of_tables() {
-    //     let mut batter1 = HashMap::new();
-    //     batter1.insert("id".to_string(), Node::Str("1001".to_string()));
-    //     batter1.insert("type".to_string(), Node::Str("Regular".to_string()));
-    //
-    //     let mut batter2 = HashMap::new();
-    //     batter2.insert("id".to_string(), Node::Str("1002".to_string()));
-    //     batter2.insert("type".to_string(), Node::Str("Chocolate".to_string()));
-    //
-    //     let batters = vec![Node::Object(batter1), Node::Object(batter2)];
-    //     let mut batters_obj = HashMap::new();
-    //     batters_obj.insert("batter".to_string(), Node::Array(batters));
-    //
-    //     let mut item = HashMap::new();
-    //     item.insert("batters".to_string(), Node::Object(batters_obj));
-    //     item.insert("name".to_string(), Node::Str("Cake".to_string()));
-    //
-    //     let items = vec![Node::Object(item)];
-    //     let mut root = HashMap::new();
-    //     root.insert("items".to_string(), Node::Array(items));
-    //
-    //     let mut dest = BufferDestination::new();
-    //     stringify(&Node::Object(root), &mut dest).unwrap();
-    //     assert_eq!(
-    //         dest.to_string(),
-    //         "[[items]]\nname = \"Cake\"\n[[items.batters.batter]]\nid = \"1001\"\ntype = \"Regular\"\n[[items.batters.batter]]\nid = \"1002\"\ntype = \"Chocolate\"\n"
-    //     );
-    // }
-    //
-    // #[test]
-    // fn test_stringify_complex_array_of_tables() {
-    //     let mut code1 = HashMap::new();
-    //     code1.insert("hex".to_string(), Node::Str("#000".to_string()));
-    //     code1.insert("rgba".to_string(), Node::Array(vec![
-    //         Node::Number(Numeric::Integer(0)),
-    //         Node::Number(Numeric::Integer(0)),
-    //         Node::Number(Numeric::Integer(0)),
-    //         Node::Number(Numeric::Integer(1))
-    //     ]));
-    //
-    //     let mut color1 = HashMap::new();
-    //     color1.insert("name".to_string(), Node::Str("black".to_string()));
-    //     color1.insert("code".to_string(), Node::Object(code1));
-    //
-    //     let colors = vec![Node::Object(color1)];
-    //     let mut root = HashMap::new();
-    //     root.insert("colors".to_string(), Node::Array(colors));
-    //
-    //     let mut dest = BufferDestination::new();
-    //     stringify(&Node::Object(root), &mut dest).unwrap();
-    //     assert_eq!(
-    //         dest.to_string(),
-    //         "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
-    //     );
-    // }
+        let mut batter2 = HashMap::new();
+        batter2.insert("id".to_string(), Node::Str("1002".to_string()));
+        batter2.insert("type".to_string(), Node::Str("Chocolate".to_string()));
+
+        let batters = vec![Node::Object(batter1), Node::Object(batter2)];
+        let mut batters_obj = HashMap::new();
+        batters_obj.insert("batter".to_string(), Node::Array(batters));
+
+        let mut item = HashMap::new();
+        item.insert("batters".to_string(), Node::Object(batters_obj));
+        item.insert("name".to_string(), Node::Str("Cake".to_string()));
+
+        let items = vec![Node::Object(item)];
+        let mut root = HashMap::new();
+        root.insert("items".to_string(), Node::Array(items));
+
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "[[items]]\nname = \"Cake\"\n[[items.batters.batter]]\nid = \"1001\"\ntype = \"Regular\"\n[[items.batters.batter]]\nid = \"1002\"\ntype = \"Chocolate\"\n"
+        );
+    }
+
+    #[test]
+    fn test_stringify_complex_array_of_tables() {
+        let mut code1 = HashMap::new();
+        code1.insert("hex".to_string(), Node::Str("#000".to_string()));
+        code1.insert("rgba".to_string(), Node::Array(vec![
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(1))
+        ]));
+
+        let mut color1 = HashMap::new();
+        color1.insert("name".to_string(), Node::Str("black".to_string()));
+        color1.insert("code".to_string(), Node::Object(code1));
+
+        let colors = vec![Node::Object(color1)];
+        let mut root = HashMap::new();
+        root.insert("colors".to_string(), Node::Array(colors));
+
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(root), &mut dest).unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
+        );
+    }
 
 
 }
