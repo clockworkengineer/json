@@ -140,7 +140,9 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     }
 
     // First pass - handle simple values
-    for (key, value) in simple_values {
+
+    let simple_values_sorted: BTreeMap<_, _> = simple_values.into_iter().collect();
+    for (key, value) in simple_values_sorted {
         stringify_header(prefix, destination, &mut is_first, key, value)?;
     }
 
@@ -390,7 +392,7 @@ mod tests {
         stringify(&Node::Object(root), &mut dest).unwrap();
         assert_eq!(
             dest.to_string(),
-            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
+            "[[colors]]\nname = \"black\"\n[colors.code]\nrgba = [0, 0, 0, 1]\nhex = \"#000\"\n"
         );
     }
 
