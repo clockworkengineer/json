@@ -95,7 +95,7 @@ fn stringify_array(items: &Vec<Node>, destination: &mut dyn IDestination) -> Res
     destination.add_bytes("]");
     Ok(())
 }
-fn stringify_header(prefix: &str, destination: &mut dyn IDestination, is_first: &mut bool, key: &String, value: &Node) -> Result<(), String> {
+fn stringify_key_value_pair(prefix: &str, destination: &mut dyn IDestination, is_first: &mut bool, key: &String, value: &Node) -> Result<(), String> {
     if !prefix.is_empty() && *is_first {
         destination.add_bytes("[");
         destination.add_bytes(prefix);
@@ -116,7 +116,6 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     let dict_sorted: BTreeMap<_, _> = dict.iter().collect();
     let mut tables = BTreeMap::new();
     let mut array_tables = BTreeMap::new();
-    // let mut simple_values: BTreeMap<&String, &Node> = BTreeMap::new();
     let mut is_first = true;
 
     // First pass - handle simple key-value pairs and collect tables/arrays of tables
@@ -130,29 +129,18 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                     // Collect arrays of tables
                     array_tables.insert(key, items);
                 } else {
-                    stringify_header(prefix, destination, &mut is_first, key, value)?;
+                    stringify_key_value_pair(prefix, destination, &mut is_first, key, value)?;
                 }
             }
             _ => {
-                stringify_header(prefix, destination, &mut is_first, key, value)?;
+                stringify_key_value_pair(prefix, destination, &mut is_first, key, value)?;
             }
         }
     }
 
-    // First pass - handle simple values
-
-    // let simple_values_sorted: BTreeMap<_, _> = simple_values.into_iter().collect();
-    // for (key, value) in simple_values_sorted {
-    //     stringify_header(prefix, destination, &mut is_first, key, value)?;
-    // }
-
     // Second pass - handle nested tables
     for (key, nested) in tables {
-        let new_prefix = if prefix.is_empty() {
-            key.to_string()
-        } else {
-            format!("{}.{}", prefix, key)
-        };
+        let new_prefix = calculate_prefix(prefix, key);
         stringify_object(nested, &new_prefix, destination)?;
     }
 
@@ -161,11 +149,7 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     for (key, items) in array_tables_sorted {
         for item in items {
             if let Node::Object(nested) = item {
-                let new_prefix = if prefix.is_empty() {
-                    key.to_string()
-                } else {
-                    format!("{}.{}", prefix, key)
-                };
+                let new_prefix = calculate_prefix(prefix, key);
                 destination.add_bytes("[[");
                 destination.add_bytes(&new_prefix);
                 destination.add_bytes("]]\n");
@@ -199,9 +183,6 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
                             }
                         }
                         _ => {
-                            // destination.add_bytes(inner_key);
-                            // destination.add_bytes(" = ");
-                            // stringify_value(inner_value, true, destination)?;
                         }
                     }
                 }
@@ -212,6 +193,14 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
     Ok(())
 }
 
+fn calculate_prefix(prefix: &str, key: &String) -> String {
+    let new_prefix = if prefix.is_empty() {
+        key.to_string()
+    } else {
+        format!("{}.{}", prefix, key)
+    };
+    new_prefix
+}
 
 #[cfg(test)]
 mod tests {
@@ -337,7 +326,7 @@ mod tests {
         let node = crate::parse(&mut source).unwrap();
         let mut dest = BufferDestination::new();
         stringify(&node, &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "[[colors]]\ncategory = \"hue\"\ncolor = \"black\"\ntype = \"primary\"\n[colors.code]\nrgba = [255, 255, 255, 1]\nhex = \"#000\"\n");
+        assert_eq!(dest.to_string(), "[[colors]]\ncategory = \"hue\"\ncolor = \"black\"\ntype = \"primary\"\n[colors.code]\nhex = \"#000\"\nrgba = [255, 255, 255, 1]\n");
     }
     #[test]
     fn test_stringify_nested_array_of_tables() {
@@ -392,9 +381,10 @@ mod tests {
         stringify(&Node::Object(root), &mut dest).unwrap();
         assert_eq!(
             dest.to_string(),
-            "[[colors]]\nname = \"black\"\n[colors.code]\nrgba = [0, 0, 0, 1]\nhex = \"#000\"\n"
+            "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
         );
     }
+
 
 
 }
