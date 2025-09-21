@@ -585,5 +585,6 @@ mod tests {
             "[[colors]]\nname = \"black\"\n[colors.code]\nhex = \"#000\"\nrgba = [0, 0, 0, 1]\n"
         );
     }
+
     
 }
