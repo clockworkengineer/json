@@ -339,7 +339,16 @@ fn process_simple_values(nested_sorted: &BTreeMap<&String, &Node>,
                          destination: &mut dyn IDestination) -> Result<(), String> {
     for (inner_key, inner_value) in nested_sorted {
         match inner_value {
-            Node::Object(_) | Node::Array(_) => {}
+            Node::Object(_) => {}
+            Node::Array(items) => {
+                destination.add_bytes(inner_key);
+                destination.add_bytes(" = ");
+                stringify_array(items, destination)?;}
+            Node::Str(inner_value) => {
+                destination.add_bytes(inner_key);
+                destination.add_bytes(" = ");
+                stringify_value(&Node::Str(inner_value.clone()), true, destination)?;
+            }
             _ => {
                 destination.add_bytes(inner_key);
                 destination.add_bytes(" = ");
@@ -586,5 +595,21 @@ mod tests {
         );
     }
 
+    #[test]
+    fn test_stringify_nested_array() {
+        let mut source = BufferSource::new(b"{ \"info\": {\r\n    \"files\": [\r\n      {\r\n        \"length\": 351874,\r\n        \"path\": [\r\n          \"large.jpeg\"\r\n        ]\r\n      },\r\n      {\r\n        \"length\": 100,\r\n        \"path\": [\r\n          \"2\"\r\n        ]\r\n        \r\n      }\r\n      ]\r\n    }\r\n      \r\n   }.");
+        let node = crate::parse(&mut source).unwrap();
+        let mut dest = BufferDestination::new();
+        stringify(&node, &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "[[info.files]]\nlength = 351874\npath = [\"large.jpeg\"][[info.files]]\nlength = 100\npath = [\"2\"]");
+    }
+    #[test]
+    fn test_stringify_nested_object_with_array() {
+        let mut source = BufferSource::new(b"{ \"info\": {\r\n    \"file\": {\"length\": 351874,\r\n        \"path\": [\r\n\"large.jpeg\"\r\n]}}}");
+        let node = crate::parse(&mut source).unwrap();
+        let mut dest = BufferDestination::new();
+        stringify(&node, &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "[info.file]\nlength = 351874\npath = [\"large.jpeg\"]\n");
+    }
     
 }
