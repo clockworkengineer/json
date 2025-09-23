@@ -1,10 +1,12 @@
 # json_lib
 
-A lightweight, modular JSON toolkit for Rust with pluggable I/O sources/destinations, a simple in-memory Node tree, and multiple serializers (JSON, YAML, XML, Bencode). Designed for small binaries, predictable behavior, and easy embedding.
+A lightweight, modular JSON toolkit for Rust with pluggable I/O sources/destinations, a simple in-memory Node tree, and
+multiple serializers (JSON, YAML, XML, Bencode, TOML). Designed for small binaries, predictable behavior, and easy
+embedding.
 
 - Core Node type representing JSON structures
 - Parser to build Node trees from streams
-- Stringifiers to JSON, YAML, XML, and Bencode
+- Stringifiers to JSON, YAML, XML, Bencode, and TOML
 - File and in-memory buffer I/O abstractions
 - Pretty-printing utilities
 - Unicode-aware file helpers (BOM detection/handling)
@@ -17,7 +19,7 @@ Minimum supported Rust version: 1.88.0
 - Parse and stringify with streaming-friendly traits
 - FileSource/FileDestination and BufferSource/BufferDestination
 - Pretty printer for human-friendly output
-- Convert a Node to alternate formats (YAML, XML, Bencode)
+- Convert a Node to alternate formats (YAML, XML, Bencode, TOML)
 - Unicode file format detection and read/write helpers
 
 ## Installation
@@ -136,6 +138,7 @@ let content = read_file_to_string("input.txt")?;
   - to_yaml(&Node, &mut Destination)
   - to_xml(&Node, &mut Destination)
   - to_bencode(&Node, &mut Destination)
+  - to_toml(&Node, &mut Destination)
 
 - Unicode-aware file helpers
   - detect_format(path) -> Result<Format, String>

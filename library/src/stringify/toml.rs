@@ -183,7 +183,7 @@ fn stringify_key_value_pair(prefix: &str, destination: &mut dyn IDestination, is
 /// This function processes the input dictionary in multiple steps:
 /// 1. Sorts key-value pairs for consistent output
 /// 2. Processes simple key-value pairs first
-/// 3. Handles nested tables 
+/// 3. Handles nested tables
 /// 4. Handles array tables
 ///
 /// # Arguments
@@ -235,18 +235,18 @@ fn process_key_value_pairs<'a>(dict_sorted: &BTreeMap<&'a String, &'a Node>,
         match value {
             Node::Object(nested) => {
                 tables.insert(key, nested);
+                continue;
             }
             Node::Array(items) => {
                 if items.iter().all(|item| matches!(item, Node::Object(_))) {
                     array_tables.insert(key, items);
-                } else {
-                    stringify_key_value_pair(prefix, destination, is_first, key, value)?;
+                    continue;
                 }
             }
             _ => {
-                stringify_key_value_pair(prefix, destination, is_first, key, value)?;
             }
         }
+        stringify_key_value_pair(prefix, destination, is_first, key, value)?;
     }
     Ok(())
 }
@@ -340,19 +340,9 @@ fn process_simple_values(nested_sorted: &BTreeMap<&String, &Node>,
     for (inner_key, inner_value) in nested_sorted {
         match inner_value {
             Node::Object(_) => {}
-            Node::Array(items) => {
-                destination.add_bytes(inner_key);
-                destination.add_bytes(" = ");
-                stringify_array(items, destination)?;}
-            Node::Str(inner_value) => {
-                destination.add_bytes(inner_key);
-                destination.add_bytes(" = ");
-                stringify_value(&Node::Str(inner_value.clone()), true, destination)?;
-            }
             _ => {
-                destination.add_bytes(inner_key);
-                destination.add_bytes(" = ");
-                stringify_value(inner_value, true, destination)?;
+                let mut is_first = true;
+                stringify_key_value_pair("", destination, &mut is_first, inner_key, inner_value)?;
             }
         }
     }
@@ -417,6 +407,7 @@ mod tests {
     use super::*;
     use crate::{BufferDestination, BufferSource};
     use std::collections::{HashMap};
+    use crate::nodes::node::make_node;
 
     #[test]
     fn test_stringify_array() {
@@ -601,7 +592,7 @@ mod tests {
         let node = crate::parse(&mut source).unwrap();
         let mut dest = BufferDestination::new();
         stringify(&node, &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "[[info.files]]\nlength = 351874\npath = [\"large.jpeg\"][[info.files]]\nlength = 100\npath = [\"2\"]");
+        assert_eq!(dest.to_string(), "[[info.files]]\nlength = 351874\npath = [\"large.jpeg\"]\n[[info.files]]\nlength = 100\npath = [\"2\"]\n");
     }
     #[test]
     fn test_stringify_nested_object_with_array() {
@@ -611,6 +602,23 @@ mod tests {
         stringify(&node, &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[info.file]\nlength = 351874\npath = [\"large.jpeg\"]\n");
     }
-    
+
+    #[test]
+    fn test_nested_array_tables() {
+        let mut dest = BufferDestination::new();
+        let mut deepest = HashMap::new();
+        deepest.insert("value".to_string(), make_node(42));
+
+        let mut inner = HashMap::new();
+        inner.insert("nested".to_string(),
+                     make_node(vec![make_node(Node::Object(deepest.clone()))]));
+
+        let mut dict = HashMap::new();
+        dict.insert("items".to_string(), make_node(vec![make_node(Node::Object(inner))]));
+
+        stringify(&Node::Object(dict), &mut dest).unwrap();
+        assert_eq!(dest.to_string(),
+                   "[[items]]\n[items.nested]\nvalue = 42\n");
+    }
     
 }
