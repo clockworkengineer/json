@@ -339,11 +339,18 @@ fn process_simple_values(nested_sorted: &BTreeMap<&String, &Node>,
                          destination: &mut dyn IDestination) -> Result<(), String> {
     for (inner_key, inner_value) in nested_sorted {
         match inner_value {
-            Node::Object(_) => {}
-            _ => {
+            Node::Object(_) => {},
+            Node::Number(_) | &&Node::Str(_) | &&Node::Boolean(_) => {
                 let mut is_first = true;
                 stringify_key_value_pair("", destination, &mut is_first, inner_key, inner_value)?;
-            }
+            },
+            Node::Array(items) => {
+                if items.iter().all(|item| matches!(item, Node::Number(_) | Node::Str(_) | Node::Boolean(_))) {
+                    let mut is_first = true;
+                    stringify_key_value_pair("", destination, &mut is_first, inner_key, inner_value)?;
+                }
+            },
+            Node::None => {}
         }
     }
     Ok(())
