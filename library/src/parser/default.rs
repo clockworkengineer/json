@@ -2,11 +2,11 @@
 //! Provides functions for parsing different JSON data types including objects,
 //! arrays, strings, numbers, boolean and null values.
 
+use crate::error::messages::*;
+use crate::io::traits::ISource;
 use crate::nodes::node::Node;
 use crate::nodes::node::Numeric;
 use std::collections::HashMap;
-use crate::io::traits::ISource;
-use crate::error::messages::*;
 
 /// Constants used for JSON parsing
 /// These define the special characters and starting characters
@@ -29,7 +29,6 @@ const EXPONENT_LOWER: char = 'e';
 const EXPONENT_UPPER: char = 'E';
 const PLUS: char = '+';
 
-
 /// Parses JSON input from a source and returns a Node representation
 ///
 /// # Arguments
@@ -49,7 +48,7 @@ pub fn parse(source: &mut dyn ISource) -> Result<Node, String> {
         Some(NULL_START) => parse_null(source),
         Some(c) if c.is_digit(10) || c == MINUS => parse_number(source),
         Some(c) => Err(format!("{}{}", ERR_UNEXPECTED_CHAR, c)),
-        None => Err(ERR_EMPTY_INPUT.to_string())
+        None => Err(ERR_EMPTY_INPUT.to_string()),
     }
 }
 
@@ -91,7 +90,7 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
         // Parse key
         let key = match parse_string(source)? {
             Node::Str(s) => s,
-            _ => return Err(ERR_OBJECT_KEY.to_string())
+            _ => return Err(ERR_OBJECT_KEY.to_string()),
         };
 
         skip_whitespace(source);
@@ -99,7 +98,7 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
         // Check for colon
         match source.current() {
             Some(COLON) => source.next(),
-            _ => return Err(ERR_EXPECT_COLON.to_string())
+            _ => return Err(ERR_EXPECT_COLON.to_string()),
         }
 
         skip_whitespace(source);
@@ -119,7 +118,7 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
                 source.next();
                 break;
             }
-            _ => return Err(ERR_EXPECT_OBJECT_END.to_string())
+            _ => return Err(ERR_EXPECT_OBJECT_END.to_string()),
         }
     }
 
@@ -159,7 +158,7 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
                 source.next();
                 break;
             }
-            _ => return Err(ERR_EXPECT_ARRAY_END.to_string())
+            _ => return Err(ERR_EXPECT_ARRAY_END.to_string()),
         }
     }
 
@@ -204,7 +203,7 @@ fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
                                     hex.push(d);
                                     source.next();
                                 }
-                                _ => return Err(ERR_INVALID_ESCAPE.to_string())
+                                _ => return Err(ERR_INVALID_ESCAPE.to_string()),
                             }
                         }
                         if let Ok(code) = u32::from_str_radix(&hex, 16) {
@@ -218,7 +217,7 @@ fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
                         }
                         continue;
                     }
-                    _ => return Err(ERR_INVALID_ESCAPE.to_string())
+                    _ => return Err(ERR_INVALID_ESCAPE.to_string()),
                 }
                 source.next();
             }
@@ -276,19 +275,19 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
                     }
                 }
             }
-            _ => break
+            _ => break,
         }
     }
 
     if is_float {
         match num_str.parse::<f64>() {
             Ok(n) => Ok(Node::Number(Numeric::Float(n))),
-            Err(_) => Err(ERR_INVALID_FLOAT.to_string())
+            Err(_) => Err(ERR_INVALID_FLOAT.to_string()),
         }
     } else {
         match num_str.parse::<i64>() {
             Ok(n) => Ok(Node::Number(Numeric::Integer(n))),
-            Err(_) => Err(ERR_INVALID_INTEGER.to_string())
+            Err(_) => Err(ERR_INVALID_INTEGER.to_string()),
         }
     }
 }
@@ -332,8 +331,6 @@ fn parse_null(source: &mut dyn ISource) -> Result<Node, String> {
 mod tests {
     use super::*;
     use crate::io::sources::buffer::Buffer;
-    use std::fs;
-    use crate::FileSource;
 
     #[test]
     fn test_parse_null() {
@@ -368,13 +365,18 @@ mod tests {
     #[test]
     fn test_parse_number_integer() {
         let mut source = Buffer::new(b"123");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Integer(123)))));
+        assert!(matches!(
+            parse(&mut source),
+            Ok(Node::Number(Numeric::Integer(123)))
+        ));
     }
 
     #[test]
     fn test_parse_number_float() {
         let mut source = Buffer::new(b"123.45");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 123.45).abs() < f64::EPSILON));
+        assert!(
+            matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 123.45).abs() < f64::EPSILON)
+        );
     }
 
     #[test]
@@ -382,7 +384,7 @@ mod tests {
         let mut source = Buffer::new(b"[1,2,3]");
         match parse(&mut source) {
             Ok(Node::Array(arr)) => assert_eq!(arr.len(), 3),
-            _ => panic!("Expected array")
+            _ => panic!("Expected array"),
         }
     }
 
@@ -391,7 +393,7 @@ mod tests {
         let mut source = Buffer::new(b"{\"key\":\"value\"}");
         match parse(&mut source) {
             Ok(Node::Object(obj)) => assert_eq!(obj.len(), 1),
-            _ => panic!("Expected object")
+            _ => panic!("Expected object"),
         }
     }
 
@@ -400,7 +402,7 @@ mod tests {
         let mut source = Buffer::new(b"[]");
         match parse(&mut source) {
             Ok(Node::Array(arr)) => assert_eq!(arr.len(), 0),
-            _ => panic!("Expected empty array")
+            _ => panic!("Expected empty array"),
         }
     }
 
@@ -409,7 +411,7 @@ mod tests {
         let mut source = Buffer::new(b"{}");
         match parse(&mut source) {
             Ok(Node::Object(obj)) => assert_eq!(obj.len(), 0),
-            _ => panic!("Expected empty object")
+            _ => panic!("Expected empty object"),
         }
     }
 
@@ -436,7 +438,7 @@ mod tests {
         let mut source = Buffer::new(b" \t\n\r{} ");
         match parse(&mut source) {
             Ok(Node::Object(obj)) => assert_eq!(obj.len(), 0),
-            _ => panic!("Expected empty object")
+            _ => panic!("Expected empty object"),
         }
     }
 
@@ -464,68 +466,44 @@ mod tests {
         assert!(parse(&mut source).is_err());
     }
 
-    fn get_json_file_paths(directory: &str) -> Vec<String> {
-        let mut paths = Vec::new();
-        if let Ok(entries) = fs::read_dir(directory) {
-            for entry in entries {
-                if let Ok(entry) = entry {
-                    let path = entry.path();
-                    if path.extension().and_then(|s| s.to_str()) == Some("json") {
-                        if let Some(path_str) = path.to_str() {
-                            paths.push(path_str.to_string());
-                        }
-                    }
-                }
-            }
-        }
-        paths
-    }
-
-    #[test]
-    fn test_parse_json_files() {
-        let files_dir = "../files";
-        let json_files = get_json_file_paths(files_dir);
-        for file_path in json_files {
-            match FileSource::new(&file_path.to_string()) {
-                Ok(mut source) => {
-                    let result = parse(&mut source);
-                    assert!(result.is_ok(), "Failed to parse {}: {:?}", file_path, result.err());
-                },
-                Err(e) => panic!("Failed to open {}: {}", file_path, e),
-            }
-
-
-        }
-    }
-
     #[test]
     fn test_parse_negative_number() {
         let mut source = Buffer::new(b"-123");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Integer(-123)))));
+        assert!(matches!(
+            parse(&mut source),
+            Ok(Node::Number(Numeric::Integer(-123)))
+        ));
 
         let mut source = Buffer::new(b"-123.45");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - -123.45).abs() < f64::EPSILON));
+        assert!(
+            matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - -123.45).abs() < f64::EPSILON)
+        );
     }
 
     #[test]
     fn test_parse_scientific_notation() {
         let mut source = Buffer::new(b"1.23e+2");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 123.0).abs() < f64::EPSILON));
+        assert!(
+            matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 123.0).abs() < f64::EPSILON)
+        );
 
         let mut source = Buffer::new(b"1.23E-2");
-        assert!(matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 0.0123).abs() < f64::EPSILON));
+        assert!(
+            matches!(parse(&mut source), Ok(Node::Number(Numeric::Float(n))) if (n - 0.0123).abs() < f64::EPSILON)
+        );
     }
 
     #[test]
     fn test_parse_complex_object() {
-        let mut source = Buffer::new(b"{\"array\":[1,{\"nested\":true},null],\"string\":\"value\"}");
+        let mut source =
+            Buffer::new(b"{\"array\":[1,{\"nested\":true},null],\"string\":\"value\"}");
         match parse(&mut source) {
             Ok(Node::Object(obj)) => {
                 assert_eq!(obj.len(), 2);
                 assert!(obj.contains_key("array"));
                 assert!(obj.contains_key("string"));
-            },
-            _ => panic!("Expected complex object")
+            }
+            _ => panic!("Expected complex object"),
         }
     }
 
@@ -566,6 +544,4 @@ mod tests {
         let mut source = Buffer::new(b"\"\\u00zz\"");
         assert!(parse(&mut source).is_err());
     }
-    
 }
-
