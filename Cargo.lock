@@ -21,6 +21,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_advanced_features"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "json_create_at_runtime"
 version = "0.1.5"
 dependencies = [
