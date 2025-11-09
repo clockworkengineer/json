@@ -49,11 +49,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_merge_patch"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
+name = "json_node_builder"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
+name = "json_pointer_demo"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "json_pretty_print"
 version = "0.1.5"
 dependencies = [
  "json_lib",
  "json_utility_lib",
+]
+
+[[package]]
+name = "json_query_traverse"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
 ]
 
 [[package]]
@@ -94,6 +122,13 @@ version = "0.1.5"
 dependencies = [
  "json_lib",
  "json_utility_lib",
+]
+
+[[package]]
+name = "json_unicode_files"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
 ]
 
 [[package]]

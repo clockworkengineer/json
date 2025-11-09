@@ -1,0 +1,7 @@
+[package]
+name = "json_merge_patch"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+json_lib = { path = "../../library" }

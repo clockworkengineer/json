@@ -11,4 +11,9 @@ members = [
     "examples/json_create_at_runtime",
     "examples/json_to_toml",
     "examples/json_advanced_features",
+    "examples/json_pointer_demo",
+    "examples/json_node_builder",
+    "examples/json_query_traverse",
+    "examples/json_unicode_files",
+    "examples/json_merge_patch",
 ]
