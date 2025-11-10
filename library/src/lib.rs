@@ -25,6 +25,9 @@ pub mod parser;
 /// Module for converting JSON structures to formatted strings
 pub mod stringify;
 
+/// Integration tests module
+mod integration_tests;
+
 /// This enum represents different Unicode text file formats with their corresponding byte order marks (BOM)
 pub use file::file::Format;
 /// This function detects the Unicode format of a text file by examining its byte order mark (BOM)

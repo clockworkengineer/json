@@ -1,7 +1,7 @@
 //! Integration tests for file operations
 //! Tests reading, writing, and detecting format of actual JSON files from the files/formatted directory
 
-use json_lib::{Format, detect_format, read_file_to_string, write_file_from_string};
+use crate::{Format, detect_format, read_file_to_string, write_file_from_string};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 

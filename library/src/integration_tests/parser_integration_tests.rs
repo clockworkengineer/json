@@ -1,7 +1,7 @@
 //! Integration tests for JSON parser
 //! Tests parsing of real JSON files from the files directory
 
-use json_lib::{FileSource, parse};
+use crate::{FileSource, parse};
 use std::fs;
 
 /// Helper function to get all JSON file paths from a directory
