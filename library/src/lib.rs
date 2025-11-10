@@ -26,6 +26,7 @@ pub mod parser;
 pub mod stringify;
 
 /// Integration tests module
+#[cfg(test)]
 mod integration_tests;
 
 /// This enum represents different Unicode text file formats with their corresponding byte order marks (BOM)
