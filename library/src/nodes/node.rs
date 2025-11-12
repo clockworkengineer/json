@@ -1,5 +1,14 @@
+#[cfg(feature = "std")]
 use std::collections::HashMap;
-use std::ops::{Index, IndexMut};
+
+#[cfg(not(feature = "std"))]
+use alloc::{collections::BTreeMap as HashMap, string::String, vec::Vec};
+
+#[cfg(feature = "std")]
+use core::ops::{Index, IndexMut};
+
+#[cfg(not(feature = "std"))]
+use core::ops::{Index, IndexMut};
 
 /// Represents different numeric types that can be stored in a JSON node
 #[derive(Clone, Debug, PartialEq)]

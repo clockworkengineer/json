@@ -7,6 +7,12 @@
 use crate::nodes::node::*;
 use crate::io::traits::IDestination;
 
+#[cfg(feature = "std")]
+use std::string::String;
+
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::{String, ToString}};
+
 /// Serializes a `Node` into JSON and writes it to the given destination.
 ///
 /// # Arguments

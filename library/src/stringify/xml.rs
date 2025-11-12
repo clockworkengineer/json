@@ -4,6 +4,12 @@
 use crate::nodes::node::*;
 use crate::io::traits::IDestination;
 
+#[cfg(feature = "std")]
+use std::string::String;
+
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::{String, ToString}};
+
 /// Escapes special XML characters in a string and writes them to the destination
 ///
 /// # Arguments

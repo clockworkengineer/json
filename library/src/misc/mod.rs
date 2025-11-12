@@ -5,6 +5,9 @@ use crate::io::traits::{IDestination, ISource};
 use crate::Node;
 use crate::nodes::node::Numeric;
 
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::ToString};
+
 /// Returns the current version of the package as specified in Cargo.toml.
 /// Uses CARGO_PKG_VERSION environment variable that is set during compilation
 /// from the version field in Cargo.toml.

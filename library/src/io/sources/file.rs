@@ -71,7 +71,12 @@ mod tests {
     use std::io::Write;
 
     fn create_test_file(content: &str) -> String {
-        let path = format!("test_{}.txt", rand::random::<u32>());
+        #[cfg(feature = "rand")]
+        let random_num = rand::random::<u32>();
+        #[cfg(not(feature = "rand"))]
+        let random_num = std::process::id();
+        
+        let path = format!("test_{}.txt", random_num);
         let mut file = fs::File::create(&path).unwrap();
         file.write_all(content.as_bytes()).unwrap();
         path

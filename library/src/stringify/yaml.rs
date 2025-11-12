@@ -4,6 +4,12 @@
 use crate::nodes::node::*;
 use crate::io::traits::IDestination;
 
+#[cfg(feature = "std")]
+use std::string::String;
+
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::{String, ToString}};
+
 /// Converts a Node into a YAML formatted string and writes it to the destination
 ///
 /// # Arguments

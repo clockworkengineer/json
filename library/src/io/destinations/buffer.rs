@@ -1,4 +1,8 @@
 use crate::io::traits::IDestination;
+
+#[cfg(not(feature = "std"))]
+use alloc::{vec, vec::Vec, string::String};
+
 /// A memory buffer implementation for storing encoded JSON data as bytes.
 /// Provides functionality to write and manipulate byte content in memory.
 pub struct Buffer {

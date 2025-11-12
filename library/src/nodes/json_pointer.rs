@@ -7,17 +7,34 @@
 //!
 //! ```
 //! use json_lib::{Node, Numeric};
+//! # #[cfg(feature = "std")]
 //! use std::collections::HashMap;
+//! # #[cfg(not(feature = "std"))]
+//! # use alloc::collections::BTreeMap as HashMap;
 //!
+//! # #[cfg(feature = "alloc")]
+//! # {
 //! let mut obj = HashMap::new();
 //! obj.insert("name".to_string(), Node::Str("Alice".to_string()));
 //! let node = Node::Object(obj);
 //!
 //! // Get a value using JSON Pointer
 //! let name = json_lib::nodes::json_pointer::get(&node, "/name");
+//! # }
 //! ```
 
 use crate::nodes::node::Node;
+
+#[cfg(feature = "std")]
+use std::collections::HashMap;
+
+#[cfg(not(feature = "std"))]
+use alloc::{
+    collections::BTreeMap as HashMap,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 /// Gets a value from a Node using a JSON Pointer string (RFC 6901)
 ///
@@ -146,7 +163,7 @@ pub fn set(node: &mut Node, pointer: &str, value: Node) -> Result<(), String> {
                 if is_next_array {
                     Node::Array(Vec::new())
                 } else {
-                    Node::Object(std::collections::HashMap::new())
+                    Node::Object(HashMap::new())
                 }
             }),
             Node::Array(arr) => {

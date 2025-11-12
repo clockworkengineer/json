@@ -5,6 +5,12 @@
 use crate::nodes::node::*;
 use crate::io::traits::IDestination;
 
+#[cfg(feature = "std")]
+use std::string::String;
+
+#[cfg(not(feature = "std"))]
+use alloc::{format, string::String, vec::Vec};
+
 /// Serializes a `Node` into Bencode and writes it to the given destination.
 ///
 /// # Arguments
@@ -19,7 +25,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
         Node::Number(value) => match value {
             Numeric::Integer(n) => destination.add_bytes(&format!("i{}e", n)),
             Numeric::UInteger(n) => destination.add_bytes(&format!("i{}e", n)),
-            Numeric::Float(f) => destination.add_bytes(&format!("i{}e", f.round() as i64)),
+            Numeric::Float(f) => destination.add_bytes(&format!("i{}e", *f as i64)),
             Numeric::Byte(b) => destination.add_bytes(&format!("i{}e", b)),
             Numeric::Int32(i) => destination.add_bytes(&format!("i{}e", i)),
             Numeric::UInt32(u) => destination.add_bytes(&format!("i{}e", u)),

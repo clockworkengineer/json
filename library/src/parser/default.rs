@@ -6,7 +6,17 @@ use crate::error::messages::*;
 use crate::io::traits::ISource;
 use crate::nodes::node::Node;
 use crate::nodes::node::Numeric;
+
+#[cfg(feature = "std")]
 use std::collections::HashMap;
+
+#[cfg(not(feature = "std"))]
+use alloc::{
+    collections::BTreeMap as HashMap,
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 /// Constants used for JSON parsing
 /// These define the special characters and starting characters

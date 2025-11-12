@@ -1,5 +1,8 @@
 use crate::io::traits::ISource;
 
+#[cfg(not(feature = "std"))]
+use alloc::{vec::Vec, string::String};
+
 /// A memory buffer implementation for reading JSON data from bytes.
 /// Provides functionality to traverse and read byte content from memory.
 pub struct Buffer {

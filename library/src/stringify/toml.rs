@@ -15,7 +15,17 @@
 //!
 use crate::io::traits::IDestination;
 use crate::{Node, Numeric};
-use std::collections::BTreeMap;
+
+#[cfg(feature = "std")]
+use std::collections::{BTreeMap, HashMap};
+
+#[cfg(not(feature = "std"))]
+use alloc::{
+    collections::{BTreeMap, BTreeMap as HashMap},
+    format,
+    string::{String, ToString},
+    vec::Vec,
+};
 
 /// Converts a Node structure to a TOML formatted string
 ///
@@ -194,7 +204,7 @@ fn stringify_key_value_pair(prefix: &str, destination: &mut dyn IDestination, is
 /// # Returns
 /// * `Ok(())` if conversion was successful
 /// * `Err(String)` if an error occurred during conversion
-fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str, destination: &mut dyn IDestination) -> Result<(), String> {
+fn stringify_object(dict: &HashMap<String, Node>, prefix: &str, destination: &mut dyn IDestination) -> Result<(), String> {
     if dict.is_empty() {
         return Ok(());
     }
@@ -223,8 +233,8 @@ fn stringify_object(dict: &std::collections::HashMap<String, Node>, prefix: &str
 /// A tuple containing:
 /// * First element: BTreeMap of nested table structures (key -> HashMap)
 /// * Second element: BTreeMap of array table structures (key -> Vec<Node>)
-fn get_tables_and_arrays(dict: &std::collections::HashMap<String, Node>) -> (BTreeMap<String, std::collections::HashMap<String, Node>>,
-                                                                             BTreeMap<String, Vec<Node>>) {
+fn get_tables_and_arrays(dict: &HashMap<String, Node>) -> (BTreeMap<String, HashMap<String, Node>>,
+                                                           BTreeMap<String, Vec<Node>>) {
     let dict_sorted: BTreeMap<_, _> = dict.iter().collect();
     let mut tables = BTreeMap::new();
     let mut array_tables = BTreeMap::new();
@@ -291,7 +301,7 @@ fn process_key_value_pairs<'a>(dict_sorted: &BTreeMap<&'a String, &'a Node>,
 /// # Returns
 /// * `Ok(())` if successful
 /// * `Err(String)` if an error occurred during processing
-fn process_nested_tables(tables: &BTreeMap<&String, &std::collections::HashMap<String, Node>>,
+fn process_nested_tables(tables: &BTreeMap<&String, &HashMap<String, Node>>,
                          prefix: &str,
                          destination: &mut dyn IDestination) -> Result<(), String> {
     for (key, nested) in tables {
@@ -343,7 +353,7 @@ fn process_array_tables(array_tables: &BTreeMap<&String, &Vec<Node>>,
 /// # Returns
 /// * `Ok(())` if successful
 /// * `Err(String)` if an error occurred during processing
-fn process_nested_array_table(nested: &std::collections::HashMap<String, Node>,
+fn process_nested_array_table(nested: &HashMap<String, Node>,
                               new_prefix: &str,
                               destination: &mut dyn IDestination) -> Result<(), String> {
     let nested_sorted: BTreeMap<_, _> = nested.iter().collect();
