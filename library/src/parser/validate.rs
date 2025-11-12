@@ -397,7 +397,7 @@ mod tests {
             (b"3.14", true),
             (b"1e10", true),
             (b"2.5e-3", true),
-            (b"01", false), // Leading zero
+            (b"01", false),  // Leading zero
             (b"-.5", false), // No digit before decimal
         ];
 

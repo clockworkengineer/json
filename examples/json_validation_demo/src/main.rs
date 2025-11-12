@@ -62,10 +62,7 @@ fn main() {
 
     // Example 6: Configuration limits - string length
     println!("6. Checking string length limits:");
-    let long_string = format!(
-        r#"{{"data": "{}"}}"#,
-        "x".repeat(300)
-    );
+    let long_string = format!(r#"{{"data": "{}"}}"#, "x".repeat(300));
     let mut source = BufferSource::new(long_string.as_bytes());
     let strict_config = ParserConfig::strict(); // max 256 bytes
 
@@ -114,7 +111,13 @@ fn main() {
 
     // Example 9: Large array validation
     println!("9. Validating array size limits:");
-    let large_array = format!("[{}]", (0..100).map(|i| i.to_string()).collect::<Vec<_>>().join(","));
+    let large_array = format!(
+        "[{}]",
+        (0..100)
+            .map(|i| i.to_string())
+            .collect::<Vec<_>>()
+            .join(",")
+    );
     let mut source = BufferSource::new(large_array.as_bytes());
     let small_config = ParserConfig::strict().with_max_array_size(Some(50));
 
