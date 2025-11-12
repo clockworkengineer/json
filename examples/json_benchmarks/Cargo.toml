@@ -1,0 +1,12 @@
+[package]
+name = "json_benchmarks"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+json_lib = { path = "../../library" }
+
+[[bin]]
+name = "json_benchmarks"
+path = "src/main.rs"

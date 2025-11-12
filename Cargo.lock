@@ -9,6 +9,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
 
 [[package]]
+name = "embedded_test"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "getrandom"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -28,6 +35,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_benchmarks"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "json_create_at_runtime"
 version = "0.1.6"
 dependencies = [
@@ -37,6 +51,13 @@ dependencies = [
 [[package]]
 name = "json_fibonacci"
 version = "0.1.6"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
+name = "json_iot_sensor"
+version = "0.1.0"
 dependencies = [
  "json_lib",
 ]

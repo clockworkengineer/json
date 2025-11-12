@@ -1,7 +1,7 @@
 [package]
 name = "json_advanced_features"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
-json_lib = { path = "../../library" }
+json_lib = { path = "../../library", features = ["json-pointer"] }

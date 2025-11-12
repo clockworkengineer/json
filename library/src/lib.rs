@@ -47,6 +47,10 @@ pub mod parser;
 /// Module for converting JSON structures to formatted strings
 pub mod stringify;
 
+/// Embedded systems utilities and helpers
+#[cfg(feature = "alloc")]
+pub mod embedded;
+
 /// Integration tests module
 #[cfg(test)]
 mod integration_tests;

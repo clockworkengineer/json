@@ -1,0 +1,12 @@
+[package]
+name = "embedded_test"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+name = "embedded_test"
+path = "src/lib.rs"
+
+[dependencies]
+json_lib = { path = "../../library", default-features = false, features = ["alloc"] }

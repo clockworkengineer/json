@@ -17,4 +17,10 @@ members = [
     "examples/json_unicode_files",
     "examples/json_merge_patch",
     "examples/json_parser_config",
+    "examples/json_iot_sensor",
+    "examples/json_benchmarks",
+    "examples/embedded_test",
 ]
+
+[profile.release]
+panic = "abort"
