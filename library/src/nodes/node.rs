@@ -837,7 +837,8 @@ impl TryFrom<Node> for i64 {
     type Error = &'static str;
 
     fn try_from(node: Node) -> Result<Self, Self::Error> {
-        node.as_i64().ok_or("Node is not a number or cannot be converted to i64")
+        node.as_i64()
+            .ok_or("Node is not a number or cannot be converted to i64")
     }
 }
 
@@ -845,7 +846,8 @@ impl TryFrom<&Node> for i64 {
     type Error = &'static str;
 
     fn try_from(node: &Node) -> Result<Self, Self::Error> {
-        node.as_i64().ok_or("Node is not a number or cannot be converted to i64")
+        node.as_i64()
+            .ok_or("Node is not a number or cannot be converted to i64")
     }
 }
 
@@ -853,7 +855,8 @@ impl TryFrom<Node> for f64 {
     type Error = &'static str;
 
     fn try_from(node: Node) -> Result<Self, Self::Error> {
-        node.as_f64().ok_or("Node is not a number or cannot be converted to f64")
+        node.as_f64()
+            .ok_or("Node is not a number or cannot be converted to f64")
     }
 }
 
@@ -861,7 +864,8 @@ impl TryFrom<&Node> for f64 {
     type Error = &'static str;
 
     fn try_from(node: &Node) -> Result<Self, Self::Error> {
-        node.as_f64().ok_or("Node is not a number or cannot be converted to f64")
+        node.as_f64()
+            .ok_or("Node is not a number or cannot be converted to f64")
     }
 }
 
