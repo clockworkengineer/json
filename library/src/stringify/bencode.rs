@@ -11,6 +11,13 @@ use std::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::{format, string::String, vec::Vec};
 
+/// Helper function to write a bencode string directly
+#[inline]
+fn write_bencode_string(s: &str, destination: &mut dyn IDestination) {
+    destination.add_bytes(&format!("{}:", s.len()));
+    destination.add_bytes(s);
+}
+
 /// Serializes a `Node` into Bencode and writes it to the given destination.
 ///
 /// # Arguments
@@ -32,10 +39,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("i{:?}e", value)),
         },
-        Node::Str(value) => {
-            destination.add_bytes(&format!("{}:", value.len()));
-            destination.add_bytes(value);
-        }
+        Node::Str(value) => write_bencode_string(value, destination),
         Node::Array(items) => {
             destination.add_bytes("l");
             for item in items {
@@ -48,7 +52,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
             let mut sorted_entries: Vec<_> = entries.iter().collect();
             sorted_entries.sort_by(|(k1, _), (k2, _)| k1.cmp(k2));
             for (key, value) in sorted_entries {
-                stringify(&Node::Str(key.clone()), destination)?;
+                write_bencode_string(key, destination);
                 stringify(value, destination)?;
             }
             destination.add_bytes("e");

@@ -10,13 +10,19 @@ pub struct Buffer {
     pub buffer: Vec<u8>,
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Self { buffer: vec![] }
+    }
+}
+
 impl Buffer {
     /// Creates a new empty Buffer instance.
     ///
     /// # Returns
     /// A new Buffer with an empty internal byte vector.
     pub fn new() -> Self {
-        Self { buffer: vec![] }
+        Self::default()
     }
 
     /// Converts the buffer content to a String.

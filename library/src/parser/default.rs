@@ -95,6 +95,7 @@ fn parse_value(
 ///
 /// # Arguments
 /// * `source` - Source to read characters from
+#[inline]
 fn skip_whitespace(source: &mut dyn ISource) {
     while let Some(c) = source.current() {
         if !c.is_whitespace() {
@@ -112,6 +113,7 @@ fn skip_whitespace(source: &mut dyn ISource) {
 ///
 /// # Returns
 /// * `Result<Node, String>` - Object Node or error message
+#[allow(dead_code)]
 fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
     parse_object_with_config(source, &ParserConfig::unlimited(), 0)
 }
@@ -188,6 +190,7 @@ fn parse_object_with_config(
 ///
 /// # Returns
 /// * `Result<Node, String>` - Array Node or error message
+#[allow(dead_code)]
 fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
     parse_array_with_config(source, &ParserConfig::unlimited(), 0)
 }
@@ -245,6 +248,7 @@ fn parse_array_with_config(
 ///
 /// # Returns
 /// * `Result<Node, String>` - String Node or error message
+#[allow(dead_code)]
 fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
     parse_string_with_config(source, &ParserConfig::unlimited())
 }
@@ -254,7 +258,9 @@ fn parse_string_with_config(
     source: &mut dyn ISource,
     config: &ParserConfig,
 ) -> Result<Node, String> {
-    let mut s = String::new();
+    // Pre-allocate capacity based on limit or use a reasonable default
+    let capacity = config.max_string_length.unwrap_or(64).min(1024);
+    let mut s = String::with_capacity(capacity);
     source.next(); // Skip opening quote
 
     while let Some(c) = source.current() {

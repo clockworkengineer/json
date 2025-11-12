@@ -10,6 +10,8 @@ use core::ops::{Index, IndexMut};
 #[cfg(not(feature = "std"))]
 use core::ops::{Index, IndexMut};
 
+use core::fmt;
+
 /// Represents different numeric types that can be stored in a JSON node
 #[derive(Clone, Debug, PartialEq)]
 pub enum Numeric {
@@ -129,36 +131,123 @@ impl Node {
     }
 
     /// Returns true if this node is an object
+    #[inline]
     pub fn is_object(&self) -> bool {
         matches!(self, Node::Object(_))
     }
 
     /// Returns true if this node is an array
+    #[inline]
     pub fn is_array(&self) -> bool {
         matches!(self, Node::Array(_))
     }
 
     /// Returns true if this node is a string
+    #[inline]
     pub fn is_string(&self) -> bool {
         matches!(self, Node::Str(_))
     }
 
     /// Returns true if this node is a number
+    #[inline]
     pub fn is_number(&self) -> bool {
         matches!(self, Node::Number(_))
     }
 
     /// Returns true if this node is a boolean
+    #[inline]
     pub fn is_boolean(&self) -> bool {
         matches!(self, Node::Boolean(_))
     }
 
     /// Returns true if this node is None/null
+    #[inline]
     pub fn is_null(&self) -> bool {
         matches!(self, Node::None)
     }
 
+    /// Returns an iterator over the keys of an object
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::new();
+    /// map.insert("a".to_string(), Node::from(1));
+    /// map.insert("b".to_string(), Node::from(2));
+    /// let node = Node::Object(map);
+    ///
+    /// let keys: Vec<&str> = node.keys().unwrap().collect();
+    /// assert_eq!(keys.len(), 2);
+    /// ```
+    #[inline]
+    pub fn keys(&self) -> Option<impl Iterator<Item = &str>> {
+        match self {
+            Node::Object(map) => Some(map.keys().map(|s| s.as_str())),
+            _ => None,
+        }
+    }
+
+    /// Returns an iterator over the values if this is an object
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::new();
+    /// map.insert("a".to_string(), Node::from(1));
+    /// let node = Node::Object(map);
+    /// let values: Vec<_> = node.object_values().unwrap().collect();
+    /// assert_eq!(values.len(), 1);
+    /// ```
+    #[inline]
+    pub fn object_values(&self) -> Option<impl Iterator<Item = &Node>> {
+        match self {
+            Node::Object(map) => Some(map.values()),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable iterator over object values
+    #[inline]
+    pub fn object_values_mut(&mut self) -> Option<impl Iterator<Item = &mut Node>> {
+        match self {
+            Node::Object(map) => Some(map.values_mut()),
+            _ => None,
+        }
+    }
+
+    /// Returns an iterator over array elements
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let arr = Node::Array(vec![Node::from(1), Node::from(2)]);
+    /// let values: Vec<_> = arr.array_iter().unwrap().collect();
+    /// assert_eq!(values.len(), 2);
+    /// ```
+    #[inline]
+    pub fn array_iter(&self) -> Option<impl Iterator<Item = &Node>> {
+        match self {
+            Node::Array(vec) => Some(vec.iter()),
+            _ => None,
+        }
+    }
+
+    /// Returns a mutable iterator over array elements
+    #[inline]
+    pub fn array_iter_mut(&mut self) -> Option<impl Iterator<Item = &mut Node>> {
+        match self {
+            Node::Array(vec) => Some(vec.iter_mut()),
+            _ => None,
+        }
+    }
+
     /// Returns the string value if this node is a Str, None otherwise
+    #[inline]
     pub fn as_str(&self) -> Option<&str> {
         match self {
             Node::Str(s) => Some(s.as_str()),
@@ -167,6 +256,7 @@ impl Node {
     }
 
     /// Returns the boolean value if this node is a Boolean, None otherwise
+    #[inline]
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             Node::Boolean(b) => Some(*b),
@@ -175,6 +265,7 @@ impl Node {
     }
 
     /// Returns the number value if this node is a Number, None otherwise
+    #[inline]
     pub fn as_number(&self) -> Option<&Numeric> {
         match self {
             Node::Number(n) => Some(n),
@@ -182,7 +273,89 @@ impl Node {
         }
     }
 
+    /// Converts the node to i64 if it's a numeric type
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let node = Node::from(42);
+    /// assert_eq!(node.as_i64(), Some(42));
+    ///
+    /// let node = Node::from(42.7);
+    /// assert_eq!(node.as_i64(), Some(42));
+    /// ```
+    #[inline]
+    pub fn as_i64(&self) -> Option<i64> {
+        match self {
+            Node::Number(Numeric::Integer(n)) => Some(*n),
+            Node::Number(Numeric::Int32(n)) => Some(*n as i64),
+            Node::Number(Numeric::Int16(n)) => Some(*n as i64),
+            Node::Number(Numeric::Int8(n)) => Some(*n as i64),
+            Node::Number(Numeric::UInteger(n)) => Some(*n as i64),
+            Node::Number(Numeric::UInt32(n)) => Some(*n as i64),
+            Node::Number(Numeric::UInt16(n)) => Some(*n as i64),
+            Node::Number(Numeric::Byte(n)) => Some(*n as i64),
+            Node::Number(Numeric::Float(f)) => Some(*f as i64),
+            _ => None,
+        }
+    }
+
+    /// Converts the node to f64 if it's a numeric type
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let node = Node::from(42.5);
+    /// assert_eq!(node.as_f64(), Some(42.5));
+    ///
+    /// let node = Node::from(42);
+    /// assert_eq!(node.as_f64(), Some(42.0));
+    /// ```
+    #[inline]
+    pub fn as_f64(&self) -> Option<f64> {
+        match self {
+            Node::Number(Numeric::Float(f)) => Some(*f),
+            Node::Number(Numeric::Integer(n)) => Some(*n as f64),
+            Node::Number(Numeric::Int32(n)) => Some(*n as f64),
+            Node::Number(Numeric::Int16(n)) => Some(*n as f64),
+            Node::Number(Numeric::Int8(n)) => Some(*n as f64),
+            Node::Number(Numeric::UInteger(n)) => Some(*n as f64),
+            Node::Number(Numeric::UInt32(n)) => Some(*n as f64),
+            Node::Number(Numeric::UInt16(n)) => Some(*n as f64),
+            Node::Number(Numeric::Byte(n)) => Some(*n as f64),
+            _ => None,
+        }
+    }
+
+    /// Converts the node to u64 if it's a numeric type
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let node = Node::from(42u64);
+    /// assert_eq!(node.as_u64(), Some(42));
+    /// ```
+    #[inline]
+    pub fn as_u64(&self) -> Option<u64> {
+        match self {
+            Node::Number(Numeric::UInteger(n)) => Some(*n),
+            Node::Number(Numeric::UInt32(n)) => Some(*n as u64),
+            Node::Number(Numeric::UInt16(n)) => Some(*n as u64),
+            Node::Number(Numeric::Byte(n)) => Some(*n as u64),
+            Node::Number(Numeric::Integer(n)) if *n >= 0 => Some(*n as u64),
+            Node::Number(Numeric::Int32(n)) if *n >= 0 => Some(*n as u64),
+            Node::Number(Numeric::Int16(n)) if *n >= 0 => Some(*n as u64),
+            Node::Number(Numeric::Int8(n)) if *n >= 0 => Some(*n as u64),
+            Node::Number(Numeric::Float(f)) if *f >= 0.0 => Some(*f as u64),
+            _ => None,
+        }
+    }
+
     /// Returns the array reference if this node is an Array, None otherwise
+    #[inline]
     pub fn as_array(&self) -> Option<&Vec<Node>> {
         match self {
             Node::Array(arr) => Some(arr),
@@ -191,6 +364,7 @@ impl Node {
     }
 
     /// Returns a mutable array reference if this node is an Array, None otherwise
+    #[inline]
     pub fn as_array_mut(&mut self) -> Option<&mut Vec<Node>> {
         match self {
             Node::Array(arr) => Some(arr),
@@ -199,6 +373,7 @@ impl Node {
     }
 
     /// Returns the object reference if this node is an Object, None otherwise
+    #[inline]
     pub fn as_object(&self) -> Option<&HashMap<String, Node>> {
         match self {
             Node::Object(map) => Some(map),
@@ -207,9 +382,84 @@ impl Node {
     }
 
     /// Returns a mutable object reference if this node is an Object, None otherwise
+    #[inline]
     pub fn as_object_mut(&mut self) -> Option<&mut HashMap<String, Node>> {
         match self {
             Node::Object(map) => Some(map),
+            _ => None,
+        }
+    }
+
+    /// Consumes the node and returns the string if this is a Str variant
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let node = Node::from("hello");
+    /// assert_eq!(node.into_string(), Some("hello".to_string()));
+    ///
+    /// let node = Node::from(42);
+    /// assert_eq!(node.into_string(), None);
+    /// ```
+    #[inline]
+    pub fn into_string(self) -> Option<String> {
+        match self {
+            Node::Str(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// Consumes the node and returns the array if this is an Array variant
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let node = Node::Array(vec![Node::from(1), Node::from(2)]);
+    /// assert_eq!(node.into_array().map(|v| v.len()), Some(2));
+    /// ```
+    #[inline]
+    pub fn into_array(self) -> Option<Vec<Node>> {
+        match self {
+            Node::Array(vec) => Some(vec),
+            _ => None,
+        }
+    }
+
+    /// Consumes the node and returns the object if this is an Object variant
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::new();
+    /// map.insert("key".to_string(), Node::from(42));
+    /// let node = Node::Object(map);
+    /// assert_eq!(node.into_object().map(|m| m.len()), Some(1));
+    /// ```
+    #[inline]
+    pub fn into_object(self) -> Option<HashMap<String, Node>> {
+        match self {
+            Node::Object(map) => Some(map),
+            _ => None,
+        }
+    }
+
+    /// Consumes the node and returns the number if this is a Number variant
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let node = Node::from(42);
+    /// assert!(node.into_number().is_some());
+    /// ```
+    #[inline]
+    pub fn into_number(self) -> Option<Numeric> {
+        match self {
+            Node::Number(n) => Some(n),
             _ => None,
         }
     }
@@ -248,26 +498,71 @@ impl Node {
         match (self, other) {
             (Node::Object(self_map), Node::Object(other_map)) => {
                 for (key, other_value) in other_map {
-                    self_map
-                        .entry(key)
-                        .and_modify(|self_value| {
-                            if self_value.is_object() && other_value.is_object() {
-                                self_value.merge(other_value.clone());
-                            } else {
-                                *self_value = other_value.clone();
-                            }
-                        })
-                        .or_insert(other_value);
+                    match self_map.get_mut(&key) {
+                        Some(self_value) if self_value.is_object() && other_value.is_object() => {
+                            // Recursive merge for nested objects
+                            self_value.merge(other_value);
+                        }
+                        Some(self_value) => {
+                            // Replace existing value
+                            *self_value = other_value;
+                        }
+                        None => {
+                            // Insert new value
+                            self_map.insert(key, other_value);
+                        }
+                    }
                 }
             }
             (this, other) => *this = other,
         }
     }
 
-    /// Creates a deep clone of this node
-    /// This is equivalent to calling `.clone()` but provided for API consistency
-    pub fn deep_clone(&self) -> Node {
-        self.clone()
+    /// Returns the length of an array or object, None for other types
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let arr = Node::Array(vec![Node::from(1), Node::from(2), Node::from(3)]);
+    /// assert_eq!(arr.len(), Some(3));
+    ///
+    /// let obj = Node::Object(std::collections::HashMap::new());
+    /// assert_eq!(obj.len(), Some(0));
+    ///
+    /// let num = Node::from(42);
+    /// assert_eq!(num.len(), None);
+    /// ```
+    #[inline]
+    pub fn len(&self) -> Option<usize> {
+        match self {
+            Node::Array(arr) => Some(arr.len()),
+            Node::Object(map) => Some(map.len()),
+            _ => None,
+        }
+    }
+
+    /// Returns true if this node is an empty array or object
+    ///
+    /// Returns false for non-collection types
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let arr = Node::Array(vec![]);
+    /// assert!(arr.is_empty());
+    ///
+    /// let num = Node::from(42);
+    /// assert!(!num.is_empty());
+    /// ```
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Node::Array(arr) => arr.is_empty(),
+            Node::Object(map) => map.is_empty(),
+            _ => false,
+        }
     }
 }
 
@@ -449,6 +744,143 @@ impl From<bool> for Node {
 impl From<String> for Node {
     fn from(value: String) -> Self {
         Node::Str(value)
+    }
+}
+
+// Display implementations for better debugging
+impl fmt::Display for Numeric {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Numeric::Integer(n) => write!(f, "{}", n),
+            Numeric::Float(n) => write!(f, "{}", n),
+            Numeric::UInteger(n) => write!(f, "{}", n),
+            Numeric::Byte(n) => write!(f, "{}", n),
+            Numeric::Int32(n) => write!(f, "{}", n),
+            Numeric::UInt32(n) => write!(f, "{}", n),
+            Numeric::Int16(n) => write!(f, "{}", n),
+            Numeric::UInt16(n) => write!(f, "{}", n),
+            Numeric::Int8(n) => write!(f, "{}", n),
+        }
+    }
+}
+
+impl fmt::Display for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Node::None => write!(f, "null"),
+            Node::Boolean(b) => write!(f, "{}", b),
+            Node::Number(n) => write!(f, "{}", n),
+            Node::Str(s) => write!(f, "\"{}\"", s),
+            Node::Array(arr) => {
+                write!(f, "[")?;
+                for (i, item) in arr.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{}", item)?;
+                }
+                write!(f, "]")
+            }
+            Node::Object(map) => {
+                write!(f, "{{")?;
+                let mut first = true;
+                for (key, value) in map {
+                    if !first {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "\"{}\": {}", key, value)?;
+                    first = false;
+                }
+                write!(f, "}}")
+            }
+        }
+    }
+}
+
+// TryFrom implementations for extracting values from Node
+use core::convert::TryFrom;
+
+impl TryFrom<Node> for String {
+    type Error = &'static str;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        match node {
+            Node::Str(s) => Ok(s),
+            _ => Err("Node is not a string"),
+        }
+    }
+}
+
+impl TryFrom<Node> for Vec<Node> {
+    type Error = &'static str;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        match node {
+            Node::Array(vec) => Ok(vec),
+            _ => Err("Node is not an array"),
+        }
+    }
+}
+
+impl TryFrom<Node> for HashMap<String, Node> {
+    type Error = &'static str;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        match node {
+            Node::Object(map) => Ok(map),
+            _ => Err("Node is not an object"),
+        }
+    }
+}
+
+impl TryFrom<Node> for i64 {
+    type Error = &'static str;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        node.as_i64().ok_or("Node is not a number or cannot be converted to i64")
+    }
+}
+
+impl TryFrom<&Node> for i64 {
+    type Error = &'static str;
+
+    fn try_from(node: &Node) -> Result<Self, Self::Error> {
+        node.as_i64().ok_or("Node is not a number or cannot be converted to i64")
+    }
+}
+
+impl TryFrom<Node> for f64 {
+    type Error = &'static str;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        node.as_f64().ok_or("Node is not a number or cannot be converted to f64")
+    }
+}
+
+impl TryFrom<&Node> for f64 {
+    type Error = &'static str;
+
+    fn try_from(node: &Node) -> Result<Self, Self::Error> {
+        node.as_f64().ok_or("Node is not a number or cannot be converted to f64")
+    }
+}
+
+impl TryFrom<Node> for bool {
+    type Error = &'static str;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        match node {
+            Node::Boolean(b) => Ok(b),
+            _ => Err("Node is not a boolean"),
+        }
+    }
+}
+
+impl TryFrom<&Node> for bool {
+    type Error = &'static str;
+
+    fn try_from(node: &Node) -> Result<Self, Self::Error> {
+        node.as_bool().ok_or("Node is not a boolean")
     }
 }
 

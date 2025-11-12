@@ -12,6 +12,15 @@ pub struct Buffer {
     position: usize,
 }
 
+impl Default for Buffer {
+    fn default() -> Self {
+        Self {
+            buffer: Vec::new(),
+            position: 0,
+        }
+    }
+}
+
 impl Buffer {
     /// Creates a new Buffer instance with the specified byte slice.
     ///

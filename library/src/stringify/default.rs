@@ -16,6 +16,54 @@ use alloc::{
     string::{String, ToString},
 };
 
+/// Helper function to write an escaped JSON string directly to destination
+/// Optimized to batch write unescaped characters
+#[inline]
+fn write_escaped_string(s: &str, destination: &mut dyn IDestination) {
+    destination.add_bytes("\"");
+
+    let bytes = s.as_bytes();
+    let mut start = 0;
+    let mut i = 0;
+
+    while i < bytes.len() {
+        let needs_escape = match bytes[i] {
+            b'"' | b'\\' | b'\n' | b'\r' | b'\t' => true,
+            b if b < 32 => true, // Control characters
+            _ => false,
+        };
+
+        if needs_escape {
+            // Write accumulated unescaped bytes
+            if i > start {
+                destination.add_bytes(core::str::from_utf8(&bytes[start..i]).unwrap());
+            }
+
+            // Write escape sequence
+            match bytes[i] {
+                b'"' => destination.add_bytes("\\\""),
+                b'\\' => destination.add_bytes("\\\\"),
+                b'\n' => destination.add_bytes("\\n"),
+                b'\r' => destination.add_bytes("\\r"),
+                b'\t' => destination.add_bytes("\\t"),
+                b => destination.add_bytes(&format!("\\u{:04x}", b as u32)),
+            }
+
+            i += 1;
+            start = i;
+        } else {
+            i += 1;
+        }
+    }
+
+    // Write any remaining unescaped bytes
+    if start < bytes.len() {
+        destination.add_bytes(core::str::from_utf8(&bytes[start..]).unwrap());
+    }
+
+    destination.add_bytes("\"");
+}
+
 /// Serializes a `Node` into JSON and writes it to the given destination.
 ///
 /// # Arguments
@@ -45,21 +93,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("{:?}", value)),
         },
-        Node::Str(value) => {
-            destination.add_bytes("\"");
-            for c in value.chars() {
-                match c {
-                    '"' => destination.add_bytes("\\\""),
-                    '\\' => destination.add_bytes("\\\\"),
-                    '\n' => destination.add_bytes("\\n"),
-                    '\r' => destination.add_bytes("\\r"),
-                    '\t' => destination.add_bytes("\\t"),
-                    c if c.is_control() => destination.add_bytes(&format!("\\u{:04x}", c as u32)),
-                    c => destination.add_bytes(&c.to_string()),
-                }
-            }
-            destination.add_bytes("\"");
-        }
+        Node::Str(value) => write_escaped_string(value, destination),
         Node::Array(items) => {
             destination.add_bytes("[");
             for (index, item) in items.iter().enumerate() {
@@ -76,7 +110,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
                 if index > 0 {
                     destination.add_bytes(",");
                 }
-                stringify(&Node::Str(key.clone()), destination)?;
+                write_escaped_string(key, destination);
                 destination.add_bytes(":");
                 stringify(value, destination)?;
             }

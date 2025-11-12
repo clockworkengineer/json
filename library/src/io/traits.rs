@@ -9,9 +9,14 @@ pub trait ISource {
     fn more(&mut self) -> bool;
     /// Resets the reading position to the beginning of the source.
     fn reset(&mut self);
-    fn is_whitespace(&self, c: char) -> bool {
-        c == ' ' || c == '\t' || c == '\n' || c == '\r'
-    }
+}
+
+/// Checks if a character is JSON whitespace
+///
+/// JSON whitespace consists of space, tab, newline, and carriage return
+#[inline]
+pub fn is_whitespace(c: char) -> bool {
+    c == ' ' || c == '\t' || c == '\n' || c == '\r'
 }
 
 /// Trait defining the interface for writing JSON data to a destination.
@@ -25,5 +30,4 @@ pub trait IDestination {
     fn clear(&mut self);
     /// Returns the last byte in the destination, if any.
     fn last(&self) -> Option<u8>;
-    
 }

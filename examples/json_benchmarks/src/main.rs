@@ -36,6 +36,7 @@ impl BenchmarkResult {
         }
     }
 
+    #[allow(dead_code)]
     fn with_memory(mut self, bytes: usize) -> Self {
         self.memory_estimate = Some(bytes);
         self

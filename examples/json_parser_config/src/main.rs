@@ -33,7 +33,7 @@ fn main() {
     let json = r#"{"sensor":"temp","value":23.5}"#;
     let mut source = BufferSource::new(json.as_bytes());
     match parse_with_config(&mut source, &config) {
-        Ok(node) => println!("   ✓ Parsed successfully\n"),
+        Ok(_node) => println!("   ✓ Parsed successfully\n"),
         Err(e) => println!("   ✗ Parse error: {}\n", e),
     }
 
