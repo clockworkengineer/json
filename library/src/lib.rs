@@ -99,6 +99,11 @@ pub use nodes::node::Node;
 pub use nodes::node::Numeric;
 /// Parser configuration for controlling resource limits
 pub use parser::config::ParserConfig;
+/// Parser statistics for profiling and memory tracking
+#[cfg(feature = "alloc")]
+pub use parser::stats::ParseStats;
+/// Validates JSON syntax without allocating memory
+pub use parser::validate::validate_json;
 /// Parses json data into a Node tree structure
 pub use parser::default::parse;
 /// Parses json data with custom configuration for resource limits

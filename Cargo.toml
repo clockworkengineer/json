@@ -20,6 +20,7 @@ members = [
     "examples/json_iot_sensor",
     "examples/json_benchmarks",
     "examples/embedded_test",
+    "examples/json_validation_demo",
 ]
 
 [profile.release]

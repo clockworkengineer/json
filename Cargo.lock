@@ -164,6 +164,13 @@ name = "json_utility_lib"
 version = "0.1.6"
 
 [[package]]
+name = "json_validation_demo"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.175"
 source = "registry+https://github.com/rust-lang/crates.io-index"

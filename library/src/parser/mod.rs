@@ -8,3 +8,10 @@ pub mod config;
 /// Default parser implementation
 /// Handles JSON parsing and error reporting functionality
 pub mod default;
+
+/// Parser statistics and profiling
+#[cfg(feature = "alloc")]
+pub mod stats;
+
+/// JSON validation without allocation
+pub mod validate;

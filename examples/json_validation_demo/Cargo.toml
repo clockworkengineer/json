@@ -1,0 +1,8 @@
+[package]
+name = "json_validation_demo"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+json_lib = { path = "../../library" }
