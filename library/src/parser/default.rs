@@ -6,6 +6,7 @@ use crate::error::messages::*;
 use crate::io::traits::ISource;
 use crate::nodes::node::Node;
 use crate::nodes::node::Numeric;
+use crate::parser::config::ParserConfig;
 
 #[cfg(feature = "std")]
 use std::collections::HashMap;
@@ -47,12 +48,40 @@ const PLUS: char = '+';
 /// # Returns
 /// * `Result<Node, String>` - Parsed Node or error message if parsing fails
 pub fn parse(source: &mut dyn ISource) -> Result<Node, String> {
+    parse_with_config(source, &ParserConfig::unlimited())
+}
+
+/// Parses JSON input with custom configuration for resource limits
+///
+/// # Arguments
+/// * `source` - Source implementing ISource trait that provides JSON input
+/// * `config` - Parser configuration with resource limits
+///
+/// # Returns
+/// * `Result<Node, String>` - Parsed Node or error message if parsing fails
+pub fn parse_with_config(source: &mut dyn ISource, config: &ParserConfig) -> Result<Node, String> {
+    parse_value(source, config, 0)
+}
+
+/// Internal parsing function with depth tracking
+fn parse_value(
+    source: &mut dyn ISource,
+    config: &ParserConfig,
+    depth: usize,
+) -> Result<Node, String> {
+    // Check depth limit
+    if let Some(max_depth) = config.max_depth {
+        if depth >= max_depth {
+            return Err(format!("Maximum nesting depth of {} exceeded", max_depth));
+        }
+    }
+
     skip_whitespace(source);
 
     match source.current() {
-        Some(OBJECT_START) => parse_object(source),
-        Some(ARRAY_START) => parse_array(source),
-        Some(QUOTE) => parse_string(source),
+        Some(OBJECT_START) => parse_object_with_config(source, config, depth),
+        Some(ARRAY_START) => parse_array_with_config(source, config, depth),
+        Some(QUOTE) => parse_string_with_config(source, config),
         Some(TRUE_START) => parse_true(source),
         Some(FALSE_START) => parse_false(source),
         Some(NULL_START) => parse_null(source),
@@ -84,6 +113,15 @@ fn skip_whitespace(source: &mut dyn ISource) {
 /// # Returns
 /// * `Result<Node, String>` - Object Node or error message
 fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
+    parse_object_with_config(source, &ParserConfig::unlimited(), 0)
+}
+
+/// Parses a JSON object with configuration and depth tracking
+fn parse_object_with_config(
+    source: &mut dyn ISource,
+    config: &ParserConfig,
+    depth: usize,
+) -> Result<Node, String> {
     let mut map = HashMap::new();
     source.next(); // Skip '{'
 
@@ -95,10 +133,17 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
     }
 
     loop {
+        // Check object size limit
+        if let Some(max_size) = config.max_object_size {
+            if map.len() >= max_size {
+                return Err(format!("Maximum object size of {} exceeded", max_size));
+            }
+        }
+
         skip_whitespace(source);
 
         // Parse key
-        let key = match parse_string(source)? {
+        let key = match parse_string_with_config(source, config)? {
             Node::Str(s) => s,
             _ => return Err(ERR_OBJECT_KEY.to_string()),
         };
@@ -113,8 +158,8 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
 
         skip_whitespace(source);
 
-        // Parse value
-        let value = parse(source)?;
+        // Parse value with incremented depth
+        let value = parse_value(source, config, depth + 1)?;
         map.insert(key, value);
 
         skip_whitespace(source);
@@ -144,6 +189,15 @@ fn parse_object(source: &mut dyn ISource) -> Result<Node, String> {
 /// # Returns
 /// * `Result<Node, String>` - Array Node or error message
 fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
+    parse_array_with_config(source, &ParserConfig::unlimited(), 0)
+}
+
+/// Parses a JSON array with configuration and depth tracking
+fn parse_array_with_config(
+    source: &mut dyn ISource,
+    config: &ParserConfig,
+    depth: usize,
+) -> Result<Node, String> {
     let mut vec = Vec::new();
     source.next(); // Skip '['
 
@@ -155,7 +209,15 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
     }
 
     loop {
-        vec.push(parse(source)?);
+        // Check array size limit
+        if let Some(max_size) = config.max_array_size {
+            if vec.len() >= max_size {
+                return Err(format!("Maximum array size of {} exceeded", max_size));
+            }
+        }
+
+        // Parse value with incremented depth
+        vec.push(parse_value(source, config, depth + 1)?);
 
         skip_whitespace(source);
 
@@ -184,10 +246,28 @@ fn parse_array(source: &mut dyn ISource) -> Result<Node, String> {
 /// # Returns
 /// * `Result<Node, String>` - String Node or error message
 fn parse_string(source: &mut dyn ISource) -> Result<Node, String> {
+    parse_string_with_config(source, &ParserConfig::unlimited())
+}
+
+/// Parses a JSON string with configuration for length limits
+fn parse_string_with_config(
+    source: &mut dyn ISource,
+    config: &ParserConfig,
+) -> Result<Node, String> {
     let mut s = String::new();
     source.next(); // Skip opening quote
 
     while let Some(c) = source.current() {
+        // Check string length limit
+        if let Some(max_len) = config.max_string_length {
+            if s.len() >= max_len {
+                return Err(format!(
+                    "Maximum string length of {} bytes exceeded",
+                    max_len
+                ));
+            }
+        }
+
         match c {
             QUOTE => {
                 source.next();
@@ -553,5 +633,92 @@ mod tests {
     fn test_string_unicode_escapes_invalid_hex() {
         let mut source = Buffer::new(b"\"\\u00zz\"");
         assert!(parse(&mut source).is_err());
+    }
+
+    // Configuration tests
+    #[test]
+    fn test_max_depth_exceeded() {
+        let config = ParserConfig::new().with_max_depth(Some(2));
+        let mut source = Buffer::new(b"{\"a\":{\"b\":{\"c\":1}}}");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("depth"));
+    }
+
+    #[test]
+    fn test_max_depth_within_limit() {
+        let config = ParserConfig::new().with_max_depth(Some(4));
+        let mut source = Buffer::new(b"{\"a\":{\"b\":{\"c\":1}}}");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_max_string_length_exceeded() {
+        let config = ParserConfig::new().with_max_string_length(Some(5));
+        let mut source = Buffer::new(b"\"verylongstring\"");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("string length"));
+    }
+
+    #[test]
+    fn test_max_string_length_within_limit() {
+        let config = ParserConfig::new().with_max_string_length(Some(10));
+        let mut source = Buffer::new(b"\"short\"");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_max_array_size_exceeded() {
+        let config = ParserConfig::new().with_max_array_size(Some(3));
+        let mut source = Buffer::new(b"[1,2,3,4,5]");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("array size"));
+    }
+
+    #[test]
+    fn test_max_array_size_within_limit() {
+        let config = ParserConfig::new().with_max_array_size(Some(5));
+        let mut source = Buffer::new(b"[1,2,3]");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_max_object_size_exceeded() {
+        let config = ParserConfig::new().with_max_object_size(Some(2));
+        let mut source = Buffer::new(b"{\"a\":1,\"b\":2,\"c\":3}");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("object size"));
+    }
+
+    #[test]
+    fn test_max_object_size_within_limit() {
+        let config = ParserConfig::new().with_max_object_size(Some(5));
+        let mut source = Buffer::new(b"{\"a\":1,\"b\":2}");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_strict_config() {
+        let config = ParserConfig::strict();
+        // Should fail with deeply nested structure
+        let mut source = Buffer::new(b"[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_unlimited_config() {
+        let config = ParserConfig::unlimited();
+        // Should succeed even with deeply nested structure
+        let mut source = Buffer::new(b"[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]");
+        let result = parse_with_config(&mut source, &config);
+        assert!(result.is_ok());
     }
 }

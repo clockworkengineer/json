@@ -93,8 +93,12 @@ pub use io::sources::file::File as FileSource;
 pub use nodes::node::Node;
 /// Core data structure representing a numeric value node in the parsed tree
 pub use nodes::node::Numeric;
+/// Parser configuration for controlling resource limits
+pub use parser::config::ParserConfig;
 /// Parses json data into a Node tree structure
 pub use parser::default::parse;
+/// Parses json data with custom configuration for resource limits
+pub use parser::default::parse_with_config;
 /// Converts a Node tree to Bencode format
 #[cfg(feature = "format-bencode")]
 pub use stringify::bencode::stringify as to_bencode;

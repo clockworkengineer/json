@@ -16,4 +16,5 @@ members = [
     "examples/json_query_traverse",
     "examples/json_unicode_files",
     "examples/json_merge_patch",
+    "examples/json_parser_config",
 ]

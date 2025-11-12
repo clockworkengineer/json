@@ -63,6 +63,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_parser_config"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "json_pointer_demo"
 version = "0.1.0"
 dependencies = [
