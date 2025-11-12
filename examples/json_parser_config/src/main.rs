@@ -14,7 +14,7 @@ fn main() {
     println!("   Max string length: {:?}", config.max_string_length);
     println!("   Max array size: {:?}", config.max_array_size);
     println!("   Max object size: {:?}", config.max_object_size);
-    
+
     let json = r#"{"name":"sensor","values":[1,2,3,4,5]}"#;
     let mut source = BufferSource::new(json.as_bytes());
     match parse_with_config(&mut source, &config) {
@@ -29,7 +29,7 @@ fn main() {
     println!("   Max string length: {:?}", config.max_string_length);
     println!("   Max array size: {:?}", config.max_array_size);
     println!("   Max object size: {:?}", config.max_object_size);
-    
+
     let json = r#"{"sensor":"temp","value":23.5}"#;
     let mut source = BufferSource::new(json.as_bytes());
     match parse_with_config(&mut source, &config) {
@@ -80,11 +80,11 @@ fn main() {
     // Example 7: Custom configuration for specific use case
     println!("7. Custom Configuration (IoT sensor data):");
     let config = ParserConfig::new()
-        .with_max_depth(Some(4))           // Sensor data rarely deeply nested
-        .with_max_string_length(Some(64))   // Short identifiers
-        .with_max_array_size(Some(100))     // Moderate sensor readings
-        .with_max_object_size(Some(20));    // Few fields per reading
-    
+        .with_max_depth(Some(4)) // Sensor data rarely deeply nested
+        .with_max_string_length(Some(64)) // Short identifiers
+        .with_max_array_size(Some(100)) // Moderate sensor readings
+        .with_max_object_size(Some(20)); // Few fields per reading
+
     let sensor_data = r#"{
         "device": "temp_sensor_01",
         "timestamp": 1699876543,
@@ -97,15 +97,15 @@ fn main() {
     match parse_with_config(&mut source, &config) {
         Ok(node) => {
             println!("   ✓ Parsed sensor data successfully");
-            
+
             // Demonstrate safe access methods
             if let Some(device) = node.get("device").and_then(|n| n.as_str()) {
                 println!("   Device: {}", device);
             }
-            
+
             if let Some(readings) = node.get("readings").and_then(|n| n.as_array()) {
                 println!("   Readings count: {}", readings.len());
-                
+
                 // Use safe array access
                 if let Some(first) = readings.first() {
                     if let Some(temp) = first.get("temp") {
@@ -128,7 +128,10 @@ fn main() {
 
     // Example 9: Memory usage estimation
     println!("9. Memory Usage Estimation:");
-    println!("   Node enum size: {} bytes", std::mem::size_of::<json_lib::Node>());
+    println!(
+        "   Node enum size: {} bytes",
+        std::mem::size_of::<json_lib::Node>()
+    );
     println!("   With strict config:");
     println!("     Max string: 256 bytes");
     println!("     Max array: 64 × 56 bytes = 3,584 bytes");
@@ -136,7 +139,7 @@ fn main() {
     println!("     Per level: ~6.4 KB");
     println!("     Total (16 levels): ~102 KB");
     println!();
-    
+
     println!("   With default config:");
     println!("     Max string: 4,096 bytes");
     println!("     Max array: 1,024 × 56 bytes = 57,344 bytes");
@@ -146,19 +149,19 @@ fn main() {
     println!();
 
     println!("=== Recommendations for Different Platforms ===\n");
-    
+
     println!("Ultra-Low Memory (<16KB RAM):");
     println!("  ParserConfig::strict().with_max_depth(Some(8))");
     println!();
-    
+
     println!("Low Memory (16-64KB RAM):");
     println!("  ParserConfig::strict()");
     println!();
-    
+
     println!("Medium Memory (64-256KB RAM):");
     println!("  ParserConfig::new().with_max_depth(Some(16))");
     println!();
-    
+
     println!("Higher Memory (>256KB RAM):");
     println!("  ParserConfig::new() // Use defaults");
     println!();

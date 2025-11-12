@@ -612,6 +612,9 @@ mod tests {
         println!("Size of Numeric: {} bytes", size_of::<Numeric>());
         println!("Size of String: {} bytes", size_of::<String>());
         println!("Size of Vec<Node>: {} bytes", size_of::<Vec<Node>>());
-        println!("Size of HashMap<String, Node>: {} bytes", size_of::<HashMap<String, Node>>());
+        println!(
+            "Size of HashMap<String, Node>: {} bytes",
+            size_of::<HashMap<String, Node>>()
+        );
     }
 }
