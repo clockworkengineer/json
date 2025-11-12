@@ -2,8 +2,8 @@
 //! Bencode is the encoding used by the peer-to-peer file sharing system BitTorrent
 //! for storing and transmitting loosely structured data.
 
-use crate::nodes::node::*;
 use crate::io::traits::IDestination;
+use crate::nodes::node::*;
 
 #[cfg(feature = "std")]
 use std::string::String;
@@ -18,7 +18,7 @@ use alloc::{format, string::String, vec::Vec};
 /// * `node` - The Bencode node to serialize.
 /// * `destination` - The destination to write the Bencode string to.
 
-pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String>{
+pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match node {
         Node::None => destination.add_bytes(""),
         Node::Boolean(value) => destination.add_bytes(if *value { "i1e" } else { "i0e" }),
@@ -35,14 +35,14 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
         Node::Str(value) => {
             destination.add_bytes(&format!("{}:", value.len()));
             destination.add_bytes(value);
-        },
+        }
         Node::Array(items) => {
             destination.add_bytes("l");
             for item in items {
                 stringify(item, destination)?;
             }
             destination.add_bytes("e");
-        },
+        }
         Node::Object(entries) => {
             destination.add_bytes("d");
             let mut sorted_entries: Vec<_> = entries.iter().collect();
@@ -62,8 +62,8 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
 /// Contains tests for all Node types and their bencode representations.
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use crate::io::destinations::buffer::Buffer;
+    use std::collections::HashMap;
 
     #[test]
     fn test_stringify_none() {
@@ -120,10 +120,14 @@ mod tests {
     #[test]
     fn test_stringify_array() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![
-            Node::Number(Numeric::Integer(1)),
-            Node::Str("test".to_string()),
-        ]), &mut dest).unwrap();
+        stringify(
+            &Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Str("test".to_string()),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
         assert_eq!(dest.to_string(), "li1e4:teste");
 
         let mut dest = Buffer::new();
@@ -155,13 +159,16 @@ mod tests {
     #[test]
     fn test_stringify_nested_empty() {
         let mut dest = Buffer::new();
-        let  inner_map = HashMap::new();
+        let inner_map = HashMap::new();
         let mut outer_map = HashMap::new();
         outer_map.insert("empty_object".to_string(), Node::Object(inner_map));
         outer_map.insert("empty_array".to_string(), Node::Array(vec![]));
         outer_map.insert("empty_string".to_string(), Node::Str("".to_string()));
         stringify(&Node::Object(outer_map), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "d11:empty_arrayle12:empty_objectde12:empty_string0:e");
+        assert_eq!(
+            dest.to_string(),
+            "d11:empty_arrayle12:empty_objectde12:empty_string0:e"
+        );
     }
     #[test]
     fn test_stringify_nested_object() {
@@ -171,6 +178,4 @@ mod tests {
         let mut outer_map = HashMap::new();
         outer_map.insert("inner".to_string(), Node::Object(inner_map));
     }
-
-    
 }

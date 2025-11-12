@@ -1,14 +1,17 @@
 //! XML serialization module for JSON nodes
 //! Provides functionality to convert JSON nodes into XML format
 
-use crate::nodes::node::*;
 use crate::io::traits::IDestination;
+use crate::nodes::node::*;
 
 #[cfg(feature = "std")]
 use std::string::String;
 
 #[cfg(not(feature = "std"))]
-use alloc::{format, string::{String, ToString}};
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 
 /// Escapes special XML characters in a string and writes them to the destination
 ///
@@ -96,8 +99,8 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use crate::io::destinations::buffer::Buffer;
+    use std::collections::HashMap;
 
     #[test]
     fn test_stringify_null() {
@@ -161,17 +164,27 @@ mod tests {
     fn test_stringify_special_chars() {
         let mut dest = Buffer::new();
         stringify(&Node::Str("<>&\"'".to_string()), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "<string>&lt;&gt;&amp;&quot;&apos;</string>");
+        assert_eq!(
+            dest.to_string(),
+            "<string>&lt;&gt;&amp;&quot;&apos;</string>"
+        );
     }
 
     #[test]
     fn test_stringify_array() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![
-            Node::Number(Numeric::Integer(1)),
-            Node::Str("test".to_string()),
-        ]), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "<array><item><number>1</number></item><item><string>test</string></item></array>");
+        stringify(
+            &Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Str("test".to_string()),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "<array><item><number>1</number></item><item><string>test</string></item></array>"
+        );
     }
 
     #[test]
@@ -180,22 +193,31 @@ mod tests {
         let mut map = HashMap::new();
         map.insert("key".to_string(), Node::Str("value".to_string()));
         stringify(&Node::Object(map), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "<object><entry><key>key</key><value><string>value</string></value></entry></object>");
+        assert_eq!(
+            dest.to_string(),
+            "<object><entry><key>key</key><value><string>value</string></value></entry></object>"
+        );
     }
 
     #[test]
     fn test_stringify_complex_nested() {
         let mut dest = Buffer::new();
         let mut inner_map = HashMap::new();
-        inner_map.insert("inner".to_string(), Node::Array(vec![
-            Node::Boolean(true),
-            Node::None,
-            Node::Number(Numeric::Float(42.5))
-        ]));
+        inner_map.insert(
+            "inner".to_string(),
+            Node::Array(vec![
+                Node::Boolean(true),
+                Node::None,
+                Node::Number(Numeric::Float(42.5)),
+            ]),
+        );
         let mut outer_map = HashMap::new();
         outer_map.insert("outer<".to_string(), Node::Object(inner_map));
         stringify(&Node::Object(outer_map), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "<object><entry><key>outer&lt;</key><value><object><entry><key>inner</key><value><array><item><boolean>true</boolean></item><item><null/></item><item><number>42.5</number></item></array></value></entry></object></value></entry></object>");
+        assert_eq!(
+            dest.to_string(),
+            "<object><entry><key>outer&lt;</key><value><object><entry><key>inner</key><value><array><item><boolean>true</boolean></item><item><null/></item><item><number>42.5</number></item></array></value></entry></object></value></entry></object>"
+        );
     }
 
     #[test]
@@ -225,7 +247,7 @@ mod tests {
         stringify(&Node::Number(Numeric::Float(f64::MAX)), &mut dest).unwrap();
         assert_eq!(dest.to_string(), format!("<number>{}</number>", f64::MAX));
     }
-    
+
     // #[test]
     // fn test_stringify_nested_empty_structures() {
     //     let mut dest = Buffer::new();
@@ -235,5 +257,4 @@ mod tests {
     //     stringify(&Node::Object(map), &mut dest).unwrap();
     //     assert_eq!(dest.to_string(), "<object><entry><key>empty_array</key><value><array></array></value></entry><entry><key>empty_object</key><value><object></object></value></entry></object>");
     // }
-    
 }

@@ -1,6 +1,6 @@
+use crate::io::traits::ISource;
 use std::fs::File as StdFile;
 use std::io::{Read, Seek, SeekFrom};
-use crate::io::traits::ISource;
 
 /// A file-based implementation for reading JSON data from disk.
 /// Provides functionality to read and traverse file content byte by byte.
@@ -26,7 +26,11 @@ impl File {
 
         Ok(Self {
             file,
-            current_byte: if has_byte { Some(current_byte[0]) } else { None },
+            current_byte: if has_byte {
+                Some(current_byte[0])
+            } else {
+                None
+            },
         })
     }
 }
@@ -75,7 +79,7 @@ mod tests {
         let random_num = rand::random::<u32>();
         #[cfg(not(feature = "rand"))]
         let random_num = std::process::id();
-        
+
         let path = format!("test_{}.txt", random_num);
         let mut file = fs::File::create(&path).unwrap();
         file.write_all(content.as_bytes()).unwrap();

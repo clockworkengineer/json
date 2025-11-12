@@ -4,14 +4,17 @@
 //! and write it to a destination implementing `IDestination`. Handles all JSON value types,
 //! including strings (with proper escaping), numbers, booleans, arrays, objects, and nulls.
 
-use crate::nodes::node::*;
 use crate::io::traits::IDestination;
+use crate::nodes::node::*;
 
 #[cfg(feature = "std")]
 use std::string::String;
 
 #[cfg(not(feature = "std"))]
-use alloc::{format, string::{String, ToString}};
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 
 /// Serializes a `Node` into JSON and writes it to the given destination.
 ///
@@ -20,7 +23,7 @@ use alloc::{format, string::{String, ToString}};
 /// * `node` - The JSON node to serialize.
 /// * `destination` - The destination to write the JSON string to.
 
-pub fn stringify(node: &Node, destination: &mut dyn IDestination)-> Result<(), String> {
+pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match node {
         Node::None => destination.add_bytes("null"),
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
@@ -86,9 +89,9 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination)-> Result<(), S
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use crate::io::destinations::buffer::Buffer;
-    
+    use std::collections::HashMap;
+
     #[test]
     fn test_stringify_null() {
         let mut dest = Buffer::new();
@@ -120,10 +123,14 @@ mod tests {
     #[test]
     fn test_stringify_array() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![
-            Node::Number(Numeric::Float(1.0)),
-            Node::Str("test".to_string()),
-        ]), &mut dest).unwrap();
+        stringify(
+            &Node::Array(vec![
+                Node::Number(Numeric::Float(1.0)),
+                Node::Str("test".to_string()),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
         assert_eq!(dest.to_string(), "[1,\"test\"]");
     }
 
@@ -156,7 +163,7 @@ mod tests {
             Node::Number(Numeric::Float(1.5)),
             Node::Array(vec![Node::Str("nested".to_string())]),
             Node::Object(obj),
-            Node::None
+            Node::None,
         ]);
         stringify(&array, &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[1.5,[\"nested\"],{\"key\":true},null]");
@@ -166,7 +173,10 @@ mod tests {
     fn test_stringify_special_characters() {
         let mut dest = Buffer::new();
         let mut map = HashMap::new();
-        map.insert("special\t\n".to_string(), Node::Str("value\u{0001}".to_string()));
+        map.insert(
+            "special\t\n".to_string(),
+            Node::Str("value\u{0001}".to_string()),
+        );
         stringify(&Node::Object(map), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "{\"special\\t\\n\":\"value\\u0001\"}");
     }
@@ -180,10 +190,13 @@ mod tests {
             Node::Number(Numeric::Float(42.42)),
             Node::Number(Numeric::Byte(255)),
             Node::Number(Numeric::Int32(-2147483648)),
-            Node::Number(Numeric::UInt32(4294967295))
+            Node::Number(Numeric::UInt32(4294967295)),
         ]);
         stringify(&array, &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "[-42,42,42.42,255,-2147483648,4294967295]");
+        assert_eq!(
+            dest.to_string(),
+            "[-42,42,42.42,255,-2147483648,4294967295]"
+        );
     }
 
     #[test]
@@ -206,5 +219,4 @@ mod tests {
         stringify(&Node::Str("\u{0000}\u{001F}".to_string()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "\"\\u0000\\u001f\"");
     }
-    
 }

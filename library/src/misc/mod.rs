@@ -1,8 +1,8 @@
 //! Miscellaneous utility functions for JSON processing
 //! Contain functionality for version information and formatted JSON printing
 
-use crate::io::traits::{IDestination, ISource};
 use crate::Node;
+use crate::io::traits::{IDestination, ISource};
 use crate::nodes::node::Numeric;
 
 #[cfg(not(feature = "std"))]
@@ -24,7 +24,12 @@ pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize) {
 /// * `destination` - The output destination implementing IDestination
 /// * `indent` - Number of spaces to use for each indentation level
 /// * `current_indent` - Current indentation level in spaces
- fn pretty_print(node: &Node, destination: &mut dyn IDestination, indent: usize, current_indent: usize) {
+fn pretty_print(
+    node: &Node,
+    destination: &mut dyn IDestination,
+    indent: usize,
+    current_indent: usize,
+) {
     match node {
         // Handle boolean values (true/false)
         Node::Boolean(value) => destination.add_bytes(&value.to_string()),
@@ -143,7 +148,11 @@ mod tests {
     #[test]
     fn test_print_array() {
         let mut dest = BufferDestination::new();
-        print(&Node::Array(vec![Node::Boolean(true), Node::Number(Numeric::Integer(1))]), &mut dest, 0);
+        print(
+            &Node::Array(vec![Node::Boolean(true), Node::Number(Numeric::Integer(1))]),
+            &mut dest,
+            0,
+        );
         assert_eq!(dest.to_string(), "[\ntrue,\n1\n]");
     }
 

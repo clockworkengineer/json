@@ -1,14 +1,17 @@
 //! YAML string conversion module for Node structures
 //! Provides functionality to convert Node types into YAML formatted strings
 
-use crate::nodes::node::*;
 use crate::io::traits::IDestination;
+use crate::nodes::node::*;
 
 #[cfg(feature = "std")]
 use std::string::String;
 
 #[cfg(not(feature = "std"))]
-use alloc::{format, string::{String, ToString}};
+use alloc::{
+    format,
+    string::{String, ToString},
+};
 
 /// Converts a Node into a YAML formatted string and writes it to the destination
 ///
@@ -55,7 +58,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
             } else {
                 destination.add_bytes(value);
             }
-        },
+        }
         // Handle arrays with proper YAML list formatting
         Node::Array(items) => {
             if items.is_empty() {
@@ -69,7 +72,7 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
                 stringify_with_indent(item, destination, indent + 2);
                 destination.add_bytes("\n");
             }
-        },
+        }
         // Handle objects/maps with proper YAML mapping formatting
         Node::Object(entries) => {
             if entries.is_empty() {
@@ -92,8 +95,8 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
 /// Tests for YAML stringification functionality
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use crate::io::destinations::buffer::Buffer;
+    use std::collections::HashMap;
 
     #[test]
     fn test_stringify_null() {
@@ -152,10 +155,14 @@ mod tests {
         assert_eq!(dest.to_string(), "[]");
 
         dest.clear();
-        stringify(&Node::Array(vec![
-            Node::Number(Numeric::Integer(1)),
-            Node::Str("test".to_string()),
-        ]), &mut dest).unwrap();
+        stringify(
+            &Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Str("test".to_string()),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
         assert_eq!(dest.to_string(), "\n- 1\n- test\n");
     }
 
@@ -176,14 +183,20 @@ mod tests {
     fn test_stringify_complex() {
         let mut dest = Buffer::new();
         let mut inner_map = HashMap::new();
-        inner_map.insert("nested".to_string(), Node::Array(vec![
-            Node::Boolean(true),
-            Node::Str("multi\nline".to_string())
-        ]));
+        inner_map.insert(
+            "nested".to_string(),
+            Node::Array(vec![
+                Node::Boolean(true),
+                Node::Str("multi\nline".to_string()),
+            ]),
+        );
         let mut outer_map = HashMap::new();
         outer_map.insert("test".to_string(), Node::Object(inner_map));
         stringify(&Node::Object(outer_map), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "\ntest: \n  nested: \n    - true\n    - |\n        multi\n        line\n\n\n\n");
+        assert_eq!(
+            dest.to_string(),
+            "\ntest: \n  nested: \n    - true\n    - |\n        multi\n        line\n\n\n\n"
+        );
     }
     #[test]
     fn test_stringify_empty_array() {
@@ -195,33 +208,51 @@ mod tests {
     #[test]
     fn test_stringify_nested_arrays() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![
-            Node::Array(vec![
-                Node::Number(Numeric::Integer(1)),
-                Node::Number(Numeric::Integer(2))
+        stringify(
+            &Node::Array(vec![
+                Node::Array(vec![
+                    Node::Number(Numeric::Integer(1)),
+                    Node::Number(Numeric::Integer(2)),
+                ]),
+                Node::Array(vec![
+                    Node::Number(Numeric::Integer(3)),
+                    Node::Number(Numeric::Integer(4)),
+                ]),
             ]),
-            Node::Array(vec![
-                Node::Number(Numeric::Integer(3)),
-                Node::Number(Numeric::Integer(4))
-            ])
-        ]), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "\n- \n  - 1\n  - 2\n\n- \n  - 3\n  - 4\n\n");
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "\n- \n  - 1\n  - 2\n\n- \n  - 3\n  - 4\n\n"
+        );
     }
 
     #[test]
     fn test_stringify_complex_string() {
         let mut dest = Buffer::new();
-        stringify(&Node::Str("Hello \"world\"\nWith\nMultiple\nLines".to_string()), &mut dest).unwrap();
-        assert_eq!(dest.to_string(), "|\n  Hello \"world\"\n  With\n  Multiple\n  Lines\n");
+        stringify(
+            &Node::Str("Hello \"world\"\nWith\nMultiple\nLines".to_string()),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(
+            dest.to_string(),
+            "|\n  Hello \"world\"\n  With\n  Multiple\n  Lines\n"
+        );
     }
 
     #[test]
     fn test_stringify_array_with_empty_object() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![
-            Node::Object(HashMap::new()),
-            Node::Number(Numeric::Integer(1))
-        ]), &mut dest).unwrap();
+        stringify(
+            &Node::Array(vec![
+                Node::Object(HashMap::new()),
+                Node::Number(Numeric::Integer(1)),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
         assert_eq!(dest.to_string(), "\n- {}\n- 1\n");
     }
     #[test]
@@ -256,11 +287,14 @@ mod tests {
     #[test]
     fn test_stringify_empty_array_with_empty_string() {
         let mut dest = Buffer::new();
-        stringify(&Node::Array(vec![
-            Node::Str("".to_string()),
-            Node::Number(Numeric::Integer(1))
-        ]), &mut dest).unwrap();
+        stringify(
+            &Node::Array(vec![
+                Node::Str("".to_string()),
+                Node::Number(Numeric::Integer(1)),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
         assert_eq!(dest.to_string(), "\n- \n- 1\n");
     }
-    
 }

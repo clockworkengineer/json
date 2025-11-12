@@ -1,7 +1,7 @@
 use crate::io::traits::IDestination;
 
 #[cfg(not(feature = "std"))]
-use alloc::{vec, vec::Vec, string::String};
+use alloc::{string::String, vec, vec::Vec};
 
 /// A memory buffer implementation for storing encoded JSON data as bytes.
 /// Provides functionality to write and manipulate byte content in memory.
@@ -26,7 +26,6 @@ impl Buffer {
     pub fn to_string(&self) -> String {
         String::from_utf8_lossy(&self.buffer).into_owned()
     }
-
 }
 
 impl IDestination for Buffer {
@@ -100,5 +99,4 @@ mod tests {
         buffer.add_byte(0xFF);
         assert_eq!(buffer.to_string(), "�");
     }
-    
 }
