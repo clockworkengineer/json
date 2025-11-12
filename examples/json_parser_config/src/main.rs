@@ -2,7 +2,7 @@
 //!
 //! This example shows how to use ParserConfig to control resource usage when parsing JSON.
 
-use json_lib::{parse_with_config, BufferSource, ParserConfig};
+use json_lib::{BufferSource, ParserConfig, parse_with_config};
 
 fn main() {
     println!("=== JSON Parser Configuration Examples ===\n");
