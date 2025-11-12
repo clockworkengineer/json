@@ -9,8 +9,9 @@
 //! Run with: cargo run --release --example json_benchmarks
 
 use json_lib::{
-    embedded::{memory, sensor, ArrayBuilder, ObjectBuilder},
-    parse, parse_with_config, stringify, BufferDestination, BufferSource, ParserConfig,
+    BufferDestination, BufferSource, ParserConfig,
+    embedded::{ArrayBuilder, ObjectBuilder, memory, sensor},
+    parse, parse_with_config, stringify,
 };
 use std::time::{Duration, Instant};
 

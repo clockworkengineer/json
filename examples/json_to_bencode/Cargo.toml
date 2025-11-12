@@ -4,5 +4,5 @@ version = "0.1.6"
 edition = "2024"
 
 [dependencies]
-json_lib= { path =  "../../library/", features = ["format-bencode"] }
-json_utility_lib= { path = "../json_utility_lib" }
+json_lib = { path = "../../library/", features = ["format-bencode"] }
+json_utility_lib = { path = "../json_utility_lib" }

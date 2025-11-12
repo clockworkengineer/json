@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-json_lib= { path =  "../../library/", features = ["format-toml"] }
-json_utility_lib= { path = "../json_utility_lib" }
+json_lib = { path = "../../library/", features = ["format-toml"] }
+json_utility_lib = { path = "../json_utility_lib" }
