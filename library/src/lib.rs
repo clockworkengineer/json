@@ -130,12 +130,12 @@ pub use parser::stats::ParseStats;
 pub use parser::validate::validate_json;
 
 // Performance-optimized parsing and stringification
-/// Fast parsing utilities with SIMD optimizations
-#[cfg(feature = "alloc")]
-pub use parser::fast;
 /// Arena allocator for reduced allocation overhead
 #[cfg(feature = "alloc")]
 pub use parser::arena;
+/// Fast parsing utilities with SIMD optimizations
+#[cfg(feature = "alloc")]
+pub use parser::fast;
 /// Small String Optimization for reduced heap allocations
 #[cfg(feature = "alloc")]
 pub use parser::sso;
@@ -178,3 +178,20 @@ pub use nodes::json_pointer::remove as pointer_remove;
 /// Sets a value in a Node using a JSON Pointer string
 #[cfg(feature = "json-pointer")]
 pub use nodes::json_pointer::set as pointer_set;
+
+// Advanced features (Phase 13)
+/// JSON Schema validation
+#[cfg(feature = "alloc")]
+pub use nodes::schema;
+
+/// JSON Patch (RFC 6902)
+#[cfg(feature = "json-pointer")]
+pub use nodes::patch;
+
+/// JSON Merge Patch (RFC 7386)
+#[cfg(feature = "alloc")]
+pub use nodes::merge_patch;
+
+/// JSON5 comment stripping
+#[cfg(feature = "alloc")]
+pub use parser::json5;

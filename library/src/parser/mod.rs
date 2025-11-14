@@ -27,3 +27,7 @@ pub mod arena;
 /// Small String Optimization (SSO)
 #[cfg(feature = "alloc")]
 pub mod sso;
+
+/// JSON5 comment stripping
+#[cfg(feature = "alloc")]
+pub mod json5;
