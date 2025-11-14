@@ -58,7 +58,7 @@ pub mod macros;
 // Re-export macro helper functions so macros can access them via $crate
 #[cfg(feature = "alloc")]
 #[doc(hidden)]
-pub use macros::{__json_vec_new, __json_map_new};
+pub use macros::{__json_map_new, __json_vec_new};
 
 /// Embedded systems utilities and helpers
 #[cfg(feature = "alloc")]
