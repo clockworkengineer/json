@@ -778,6 +778,37 @@ impl From<String> for Node {
     }
 }
 
+/// Convert from Option<T> where T: Into<Node>
+impl<T: Into<Node>> From<Option<T>> for Node {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(v) => v.into(),
+            None => Node::None,
+        }
+    }
+}
+
+/// Convert from fixed-size array [T; N]
+impl<T: Into<Node> + Clone, const N: usize> From<[T; N]> for Node {
+    fn from(arr: [T; N]) -> Self {
+        Node::Array(arr.into_iter().map(|x| x.into()).collect())
+    }
+}
+
+/// Convert from slice &[T]
+impl<T: Into<Node> + Clone> From<&[T]> for Node {
+    fn from(slice: &[T]) -> Self {
+        Node::Array(slice.iter().cloned().map(|x| x.into()).collect())
+    }
+}
+
+/// Convert from HashMap<String, T> where T: Into<Node>
+impl<T: Into<Node>> From<HashMap<String, T>> for Node {
+    fn from(map: HashMap<String, T>) -> Self {
+        Node::Object(map.into_iter().map(|(k, v)| (k, v.into())).collect())
+    }
+}
+
 // Display implementations for better debugging
 impl fmt::Display for Numeric {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

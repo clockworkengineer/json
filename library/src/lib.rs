@@ -28,6 +28,9 @@ extern crate alloc;
 /// Module defining error types and handling for JSON operations.
 pub mod error;
 
+// Re-export ParseError for convenience
+pub use error::parse_error::ParseError;
+
 /// Module handling JSON file reading and writing operations
 #[cfg(feature = "file-io")]
 pub mod file;
@@ -46,6 +49,16 @@ pub mod parser;
 
 /// Module for converting JSON structures to formatted strings
 pub mod stringify;
+
+/// Macros for convenient JSON construction
+#[cfg(feature = "alloc")]
+#[macro_use]
+pub mod macros;
+
+// Re-export macro helper functions so macros can access them via $crate
+#[cfg(feature = "alloc")]
+#[doc(hidden)]
+pub use macros::{__json_vec_new, __json_map_new};
 
 /// Embedded systems utilities and helpers
 #[cfg(feature = "alloc")]
