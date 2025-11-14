@@ -1189,10 +1189,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Cannot index non-array node with integer")]
     fn test_invalid_array_indexing() {
         let node = Node::Boolean(true);
-        let _value = &node[0];
+        // Non-panicking - returns &Node::None
+        assert!(node[0].is_null());
     }
 
     #[test]
@@ -1204,10 +1204,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Cannot index non-object node with string")]
     fn test_invalid_object_indexing() {
         let node = Node::Boolean(true);
-        let _value = &node["key"];
+        // Non-panicking - returns &Node::None
+        assert!(node["key"].is_null());
     }
 
     #[test]
@@ -1234,14 +1234,14 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Cannot index non-object node with string")]
+    #[should_panic(expected = "Cannot mutably index non-object node with string")]
     fn test_invalid_object_mut_indexing() {
         let mut node = Node::Boolean(true);
         node["key"] = Node::from(42);
     }
 
     #[test]
-    #[should_panic(expected = "No such key exists")]
+    #[should_panic(expected = "Key does not exist")]
     fn test_object_mut_indexing_nonexistent_key() {
         let mut obj = Node::Object(HashMap::new());
         obj["nonexistent"] = Node::from(42);
