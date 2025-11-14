@@ -128,6 +128,21 @@ pub use parser::default::parse_with_config;
 pub use parser::stats::ParseStats;
 /// Validates JSON syntax without allocating memory
 pub use parser::validate::validate_json;
+
+// Performance-optimized parsing and stringification
+/// Fast parsing utilities with SIMD optimizations
+#[cfg(feature = "alloc")]
+pub use parser::fast;
+/// Arena allocator for reduced allocation overhead
+#[cfg(feature = "alloc")]
+pub use parser::arena;
+/// Small String Optimization for reduced heap allocations
+#[cfg(feature = "alloc")]
+pub use parser::sso;
+/// Optimized stringify with lazy string escaping
+#[cfg(feature = "alloc")]
+pub use stringify::optimized::stringify_optimized;
+
 /// Converts a Node tree to Bencode format
 #[cfg(feature = "format-bencode")]
 pub use stringify::bencode::stringify as to_bencode;

@@ -2,6 +2,10 @@
 pub mod default;
 pub mod pretty;
 
+/// Optimized stringify with lazy escaping
+#[cfg(feature = "alloc")]
+pub mod optimized;
+
 /// Module for Bencode format serialization and string conversion
 #[cfg(feature = "format-bencode")]
 pub mod bencode;

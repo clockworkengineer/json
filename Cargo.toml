@@ -25,6 +25,7 @@ members = [
     "examples/json_phase8_demo",
     "examples/json_phase9_demo",
     "examples/json_phase10_demo",
+    "examples/json_phase11_demo",
 ]
 
 [profile.release]

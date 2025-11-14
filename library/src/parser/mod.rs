@@ -15,3 +15,15 @@ pub mod stats;
 
 /// JSON validation without allocation
 pub mod validate;
+
+/// Fast parsing optimizations (SIMD, fast paths)
+#[cfg(feature = "alloc")]
+pub mod fast;
+
+/// Arena allocator for reduced allocation overhead
+#[cfg(feature = "alloc")]
+pub mod arena;
+
+/// Small String Optimization (SSO)
+#[cfg(feature = "alloc")]
+pub mod sso;
