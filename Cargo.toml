@@ -22,6 +22,7 @@ members = [
     "examples/embedded_test",
     "examples/json_validation_demo",
     "examples/json_api_demo",
+    "examples/json_phase8_demo",
 ]
 
 [profile.release]

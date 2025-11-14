@@ -51,6 +51,49 @@ pub fn parse(source: &mut dyn ISource) -> Result<Node, String> {
     parse_with_config(source, &ParserConfig::unlimited())
 }
 
+/// Convenience function to parse JSON from a string slice
+///
+/// # Arguments
+/// * `s` - JSON string to parse
+///
+/// # Returns
+/// * `Result<Node, String>` - Parsed Node or error message
+///
+/// # Examples
+/// ```
+/// use json_lib::parser::default::from_str;
+///
+/// let node = from_str(r#"{"name": "Alice", "age": 30}"#).unwrap();
+/// assert!(node.is_object());
+/// ```
+pub fn from_str(s: &str) -> Result<Node, String> {
+    use crate::io::sources::buffer::Buffer as BufferSource;
+    let mut source = BufferSource::new(s.as_bytes());
+    parse(&mut source)
+}
+
+/// Convenience function to parse JSON from a byte slice
+///
+/// # Arguments
+/// * `bytes` - JSON bytes to parse
+///
+/// # Returns
+/// * `Result<Node, String>` - Parsed Node or error message
+///
+/// # Examples
+/// ```
+/// use json_lib::parser::default::from_bytes;
+///
+/// let bytes = br#"{"name": "Alice"}"#;
+/// let node = from_bytes(bytes).unwrap();
+/// assert!(node.is_object());
+/// ```
+pub fn from_bytes(bytes: &[u8]) -> Result<Node, String> {
+    use crate::io::sources::buffer::Buffer as BufferSource;
+    let mut source = BufferSource::new(bytes);
+    parse(&mut source)
+}
+
 /// Parses JSON input with custom configuration for resource limits
 ///
 /// # Arguments

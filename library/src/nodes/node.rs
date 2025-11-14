@@ -11,6 +11,8 @@ use core::ops::{Index, IndexMut};
 use core::ops::{Index, IndexMut};
 
 use core::fmt;
+use core::mem;
+use core::str::FromStr;
 
 /// Represents different numeric types that can be stored in a JSON node
 #[derive(Clone, Debug, PartialEq)]
@@ -564,6 +566,35 @@ impl Node {
             _ => false,
         }
     }
+
+    /// Takes the value out of the Node, leaving Node::None in its place
+    ///
+    /// This is useful when you want to move a value out of a Node while
+    /// leaving something valid behind.
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    /// use std::collections::HashMap;
+    ///
+    /// let mut map = HashMap::new();
+    /// map.insert("x".to_string(), Node::from(42));
+    /// let mut node = Node::Object(map);
+    ///
+    /// let old_value = node.get_mut("x").unwrap().take();
+    /// assert_eq!(old_value, Node::from(42));
+    /// assert_eq!(node.get("x").unwrap(), &Node::None);
+    /// ```
+    pub fn take(&mut self) -> Node {
+        mem::replace(self, Node::None)
+    }
+}
+
+/// Default implementation returns Node::None
+impl Default for Node {
+    fn default() -> Self {
+        Node::None
+    }
 }
 
 /// Implements array-style indexing for Node using integer indices
@@ -894,6 +925,29 @@ where
     T: Into<Node>,
 {
     value.into()
+}
+
+/// Implement FromStr to enable "string".parse::<Node>()
+impl FromStr for Node {
+    type Err = String;
+
+    /// Parse a JSON string into a Node
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    /// use std::str::FromStr;
+    ///
+    /// let node = Node::from_str(r#"{"name": "Alice"}"#).unwrap();
+    /// assert!(node.is_object());
+    /// ```
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        use crate::io::sources::buffer::Buffer as BufferSource;
+        use crate::parser::default::parse;
+
+        let mut source = BufferSource::new(s.as_bytes());
+        parse(&mut source)
+    }
 }
 
 #[cfg(test)]

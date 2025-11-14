@@ -99,6 +99,10 @@ pub use nodes::node::Node;
 pub use nodes::node::Numeric;
 /// Parser configuration for controlling resource limits
 pub use parser::config::ParserConfig;
+/// Convenience function to parse JSON from bytes
+pub use parser::default::from_bytes;
+/// Convenience function to parse JSON from a string
+pub use parser::default::from_str;
 /// Parses json data into a Node tree structure
 pub use parser::default::parse;
 /// Parses json data with custom configuration for resource limits
