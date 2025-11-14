@@ -588,6 +588,137 @@ impl Node {
     pub fn take(&mut self) -> Node {
         mem::replace(self, Node::None)
     }
+
+    /// Creates a new empty object Node
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let obj = Node::object();
+    /// assert!(obj.is_object());
+    /// assert_eq!(obj.len(), Some(0));
+    /// ```
+    pub fn object() -> Self {
+        Node::Object(HashMap::new())
+    }
+
+    /// Creates a new empty array Node
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let arr = Node::array();
+    /// assert!(arr.is_array());
+    /// assert_eq!(arr.len(), Some(0));
+    /// ```
+    pub fn array() -> Self {
+        Node::Array(Vec::new())
+    }
+
+    /// Creates a new null Node
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let null = Node::null();
+    /// assert!(null.is_null());
+    /// ```
+    pub fn null() -> Self {
+        Node::None
+    }
+
+    /// Inserts a key-value pair into an object
+    ///
+    /// Returns None if the node is not an object, or the old value if the key existed.
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::Node;
+    ///
+    /// let mut obj = Node::object();
+    /// obj.insert("name", "Alice");
+    /// assert_eq!(obj["name"].as_str(), Some("Alice"));
+    /// ```
+    pub fn insert(&mut self, key: impl Into<String>, value: impl Into<Node>) -> Option<Node> {
+        match self {
+            Node::Object(map) => map.insert(key.into(), value.into()),
+            _ => None,
+        }
+    }
+
+    /// Gets a value using JSON Pointer notation (RFC 6901)
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::{json, Node};
+    ///
+    /// let data = json!({
+    ///     "user": {
+    ///         "name": "Alice"
+    ///     }
+    /// });
+    ///
+    /// assert_eq!(data.pointer("/user/name").unwrap().as_str(), Some("Alice"));
+    /// ```
+    #[cfg(feature = "json-pointer")]
+    pub fn pointer(&self, path: &str) -> Option<&Node> {
+        crate::nodes::json_pointer::get(self, path)
+    }
+
+    /// Gets a mutable value using JSON Pointer notation (RFC 6901)
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::{json, Node};
+    ///
+    /// let mut data = json!({"x": 10});
+    /// if let Some(x) = data.pointer_mut("/x") {
+    ///     *x = Node::from(20);
+    /// }
+    /// assert_eq!(data["x"].as_i64(), Some(20));
+    /// ```
+    #[cfg(feature = "json-pointer")]
+    pub fn pointer_mut(&mut self, path: &str) -> Option<&mut Node> {
+        crate::nodes::json_pointer::get_mut(self, path)
+    }
+
+    /// Converts the Node to a pretty-printed JSON string
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::{json, Node};
+    ///
+    /// let data = json!({"name": "Alice", "age": 30});
+    /// let pretty = data.to_string_pretty();
+    /// assert!(pretty.contains("\n"));
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn to_string_pretty(&self) -> String {
+        self.to_string_with_indent("  ")
+    }
+
+    /// Converts the Node to a pretty-printed JSON string with custom indentation
+    ///
+    /// # Examples
+    /// ```
+    /// use json_lib::{json, Node};
+    ///
+    /// let data = json!({"x": 1});
+    /// let pretty = data.to_string_with_indent("\t");
+    /// assert!(pretty.contains("\t"));
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn to_string_with_indent(&self, indent: &str) -> String {
+        use crate::io::destinations::buffer::Buffer;
+        use crate::stringify::pretty::stringify_pretty;
+        
+        let mut dest = Buffer::new();
+        stringify_pretty(self, &mut dest, indent).unwrap_or_default();
+        dest.to_string()
+    }
 }
 
 /// Default implementation returns Node::None
@@ -597,28 +728,35 @@ impl Default for Node {
     }
 }
 
+// Static None node for non-panicking index operations
+static NODE_NONE: Node = Node::None;
+
 /// Implements array-style indexing for Node using integer indices
+/// Returns &Node::None for invalid access instead of panicking
 impl Index<usize> for Node {
     type Output = Node;
 
     /// Allows accessing array elements using array[index] syntax
+    /// Returns &Node::None if not an array or index out of bounds
     fn index(&self, index: usize) -> &Self::Output {
         match self {
-            Node::Array(arr) => &arr[index],
-            _ => panic!("Cannot index non-array node with integer"),
+            Node::Array(arr) => arr.get(index).unwrap_or(&NODE_NONE),
+            _ => &NODE_NONE,
         }
     }
 }
 
 /// Implements object-style indexing for Node using string keys
+/// Returns &Node::None for invalid access instead of panicking
 impl Index<&str> for Node {
     type Output = Node;
 
     /// Allows accessing object properties using object["key"] syntax
+    /// Returns &Node::None if not an object or key doesn't exist
     fn index(&self, key: &str) -> &Self::Output {
         match self {
-            Node::Object(map) => &map[key],
-            _ => panic!("Cannot index non-object node with string"),
+            Node::Object(map) => map.get(key).unwrap_or(&NODE_NONE),
+            _ => &NODE_NONE,
         }
     }
 }
@@ -635,12 +773,14 @@ impl IndexMut<usize> for Node {
 }
 
 /// Implements mutable object-style indexing for Node
+/// Note: For mutable access, the key must exist. Use insert() to add new keys.
 impl IndexMut<&str> for Node {
     /// Allows modifying object properties using object["key"] = value syntax
+    /// Panics if not an object or key doesn't exist (use insert() for new keys)
     fn index_mut(&mut self, key: &str) -> &mut Self::Output {
         match self {
-            Node::Object(map) => map.get_mut(key).expect("No such key exists"),
-            _ => panic!("Cannot index non-object node with string"),
+            Node::Object(map) => map.get_mut(key).expect("Key does not exist. Use insert() to add new keys."),
+            _ => panic!("Cannot mutably index non-object node with string"),
         }
     }
 }

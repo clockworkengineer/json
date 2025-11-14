@@ -1,0 +1,7 @@
+[package]
+name = "json_phase10_demo"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+json_lib = { path = "../../library", features = ["std", "alloc", "json-pointer"] }

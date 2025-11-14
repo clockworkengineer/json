@@ -98,6 +98,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_phase10_demo"
+version = "0.1.0"
+dependencies = [
+ "json_lib",
+]
+
+[[package]]
 name = "json_phase8_demo"
 version = "0.1.0"
 dependencies = [

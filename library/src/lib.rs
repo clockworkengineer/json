@@ -50,6 +50,9 @@ pub mod parser;
 /// Module for converting JSON structures to formatted strings
 pub mod stringify;
 
+// Re-export pretty printing for convenience
+pub use stringify::pretty::stringify_pretty;
+
 /// Macros for convenient JSON construction
 #[cfg(feature = "alloc")]
 #[macro_use]
