@@ -25,27 +25,35 @@ Minimum supported Rust version: 1.88.0
 ## Installation
 
 Add the library to a workspace member or use a path dependency:
-```
-toml
+```toml
 # Cargo.toml
 [dependencies]
 json_lib = { path = "library" }
 ```
 If publishing to crates.io or using a Git dependency, adjust accordingly.
 
+## Embedding Guide
+
+To embed this library in another Rust project:
+1. Add the path dependency as shown above.
+2. Import the required modules in your code:
+   ```rust
+   use json_lib::{Node, parse, stringify};
+   ```
+3. See the [EMBEDDING_GUIDE.md](../docs/EMBEDDING_GUIDE.md) for detailed instructions and integration tips.
+
 ## Quick start
 
 Parse a file, then pretty-print to another file:
-```
-rust
+```rust
 use json_lib::{FileSource, FileDestination, parse};
 use json_lib::json_lib::misc::print;
 use std::path::Path;
 
 fn main() -> Result<(), String> {
-let input = "data.json";
-let mut src = FileSource::new(input).map_err(|e| e.to_string())?;
-let node = parse(&mut src).map_err(|e| e.to_string())?;
+    let input = "data.json";
+    let mut src = FileSource::new(input).map_err(|e| e.to_string())?;
+    let node = parse(&mut src).map_err(|e| e.to_string())?;
 
     let output = Path::new(input).with_extension("pretty.json");
     let mut dst = FileDestination::new(output.to_string_lossy().as_ref()).map_err(|e| e.to_string())?;
@@ -56,20 +64,19 @@ let node = parse(&mut src).map_err(|e| e.to_string())?;
 }
 ```
 Build a Node in memory and stringify to a buffer:
-```
-rust
+```rust
 use json_lib::{Node, Numeric, stringify, BufferDestination};
 
 fn main() {
-let node = Node::Object(vec![
-("name".into(), Node::Str("example".into())),
-("count".into(), Node::Number(Numeric::Integer(3))),
-("items".into(), Node::Array(vec![
-Node::Boolean(true),
-Node::None,
-Node::Str("text".into())
-])),
-].into_iter().collect());
+    let node = Node::Object(vec![
+        ("name".into(), Node::Str("example".into())),
+        ("count".into(), Node::Number(Numeric::Integer(3))),
+        ("items".into(), Node::Array(vec![
+            Node::Boolean(true),
+            Node::None,
+            Node::Str("text".into())
+        ])),
+    ].into_iter().collect());
 
     let mut buf = BufferDestination::new();
     stringify(&node, &mut buf);
@@ -78,16 +85,15 @@ Node::Str("text".into())
 }
 ```
 Convert a Node to YAML/XML/Bencode:
-```
-rust
+```rust
 use json_lib::{Node, Numeric, to_yaml, to_xml, to_bencode, BufferDestination};
 
 fn main() {
-let node = Node::Array(vec![
-Node::Number(Numeric::Integer(1)),
-Node::Number(Numeric::Integer(2)),
-Node::Number(Numeric::Integer(3)),
-]);
+    let node = Node::Array(vec![
+        Node::Number(Numeric::Integer(1)),
+        Node::Number(Numeric::Integer(2)),
+        Node::Number(Numeric::Integer(3)),
+    ]);
 
     let mut yaml = BufferDestination::new();
     to_yaml(&node, &mut yaml);
@@ -103,14 +109,13 @@ Node::Number(Numeric::Integer(3)),
 }
 ```
 Read/write text files with Unicode BOM handling:
-```
-rust
+```rust
 use json_lib::{Format, detect_format, read_file_to_string, write_file_from_string};
 
 fn main() -> Result<(), String> {
-// Detect BOM/format
-let fmt = detect_format("input.txt").unwrap_or(Format::UTF8);
-let content = read_file_to_string("input.txt")?;
+    // Detect BOM/format
+    let fmt = detect_format("input.txt").unwrap_or(Format::UTF8);
+    let content = read_file_to_string("input.txt")?;
 
     // Write as UTF-8 (no BOM) regardless of input
     write_file_from_string("output.txt", &content, Format::UTF8)
@@ -172,6 +177,14 @@ This pattern works for configuration files, logs, and machine-generated data.
 
 If you’re interested in any of these, contributions are welcome.
 
+## Documentation
+
+See the [docs](../docs/README.md) folder for:
+- Development Guide
+- Contributing Guidelines
+- Code of Conduct
+- Embedding Guide
+
 ## License
 
 This project is licensed under the terms of the LICENSE file included in the repository.
@@ -185,4 +198,3 @@ This project is licensed under the terms of the LICENSE file included in the rep
 ## Support
 
 If you run into issues or have questions, please open an issue in the repository.
-```
