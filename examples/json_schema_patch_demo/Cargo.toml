@@ -1,5 +1,5 @@
 [package]
-name = "json_phase10_demo"
+name = "json_schema_patch_demo"
 version = "0.1.7"
 edition = "2024"
 

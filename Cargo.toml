@@ -22,11 +22,11 @@ members = [
     "examples/embedded_test",
     "examples/json_validation_demo",
     "examples/json_api_demo",
-    "examples/json_phase8_demo",
-    "examples/json_phase9_demo",
-    "examples/json_phase10_demo",
-    "examples/json_phase11_demo",
-    "examples/json_phase13_demo",
+    "examples/json_index_and_parse_demo",
+    "examples/json_macro_and_nested_demo",
+    "examples/json_pretty_and_safe_access_demo",
+    "examples/json_perf_and_memory_demo",
+    "examples/json_schema_patch_demo",
 ]
 
 [profile.release]

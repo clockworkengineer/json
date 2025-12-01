@@ -1,5 +1,5 @@
 [package]
-name = "json_phase13_demo"
+name = "json_pretty_and_safe_access_demo"
 version = "0.1.7"
 edition = "2024"
 
