@@ -3,7 +3,11 @@
 //! This module provides basic JSON Schema validation support for common use cases.
 //! Supports type checking, required fields, min/max constraints, pattern matching, etc.
 
+
 use crate::nodes::node::Node;
+use arrayvec::ArrayString;
+use itoa::Buffer as ItoaBuffer;
+use dtoa::Buffer as DtoaBuffer;
 
 #[cfg(feature = "std")]
 use std::collections::HashSet;
@@ -46,7 +50,6 @@ impl SchemaValidator {
     pub fn validate(&self, data: &Node) -> Result<(), Vec<ValidationError>> {
         let mut errors = Vec::new();
         self.validate_node(data, &self.schema, "", &mut errors);
-        
         if errors.is_empty() {
             Ok(())
         } else {
@@ -64,10 +67,13 @@ impl SchemaValidator {
         // Type validation
         if let Some(type_val) = schema.get("type").and_then(|n| n.as_str()) {
             if !self.check_type(data, type_val) {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Expected type '{}' but got '{}'", type_val, self.get_type_name(data)),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Expected type '");
+                msg.push_str(type_val);
+                msg.push_str("' but got '");
+                msg.push_str(self.get_type_name(data));
+                msg.push_str("'");
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
                 return; // Don't continue if type is wrong
             }
         }
@@ -132,10 +138,11 @@ impl SchemaValidator {
             for req in required {
                 if let Some(key) = req.as_str() {
                     if !obj.contains_key(key) {
-                        errors.push(ValidationError::new(
-                            path,
-                            format!("Missing required property '{}'", key),
-                        ));
+                        let mut msg = ArrayString::<48>::new();
+                        msg.push_str("Missing required property '");
+                        msg.push_str(key);
+                        msg.push('\'');
+                        errors.push(ValidationError::new(path, msg.as_str().to_owned()));
                     }
                 }
             }
@@ -158,19 +165,27 @@ impl SchemaValidator {
         // Min/max properties
         if let Some(min) = schema.get("minProperties").and_then(|n| n.as_i64()) {
             if obj.len() < min as usize {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Object has {} properties, minimum is {}", obj.len(), min),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Object has ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(obj.len()));
+                msg.push_str(" properties, minimum is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(min));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
         if let Some(max) = schema.get("maxProperties").and_then(|n| n.as_i64()) {
             if obj.len() > max as usize {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Object has {} properties, maximum is {}", obj.len(), max),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Object has ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(obj.len()));
+                msg.push_str(" properties, maximum is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(max));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
     }
@@ -198,19 +213,27 @@ impl SchemaValidator {
         // Min/max items
         if let Some(min) = schema.get("minItems").and_then(|n| n.as_i64()) {
             if arr.len() < min as usize {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Array has {} items, minimum is {}", arr.len(), min),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Array has ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(arr.len()));
+                msg.push_str(" items, minimum is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(min));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
         if let Some(max) = schema.get("maxItems").and_then(|n| n.as_i64()) {
             if arr.len() > max as usize {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Array has {} items, maximum is {}", arr.len(), max),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Array has ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(arr.len()));
+                msg.push_str(" items, maximum is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(max));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
@@ -240,19 +263,27 @@ impl SchemaValidator {
         // Min/max length
         if let Some(min) = schema.get("minLength").and_then(|n| n.as_i64()) {
             if s.len() < min as usize {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("String length is {}, minimum is {}", s.len(), min),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("String length is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(s.len()));
+                msg.push_str(", minimum is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(min));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
         if let Some(max) = schema.get("maxLength").and_then(|n| n.as_i64()) {
             if s.len() > max as usize {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("String length is {}, maximum is {}", s.len(), max),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("String length is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(s.len()));
+                msg.push_str(", maximum is ");
+                let mut buf = ItoaBuffer::new();
+                msg.push_str(buf.format(max));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
@@ -268,10 +299,11 @@ impl SchemaValidator {
                 }
             }
             if !found {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Value '{}' is not in allowed enum values", s),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Value '");
+                msg.push_str(s);
+                msg.push_str("' is not in allowed enum values");
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
     }
@@ -291,38 +323,54 @@ impl SchemaValidator {
         // Min/max
         if let Some(min) = schema.get("minimum").and_then(|n| n.as_f64()) {
             if num < min {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Number {} is less than minimum {}", num, min),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Number ");
+                let mut buf = DtoaBuffer::new();
+                msg.push_str(buf.format(num));
+                msg.push_str(" is less than minimum ");
+                let mut buf2 = DtoaBuffer::new();
+                msg.push_str(buf2.format(min));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
         if let Some(max) = schema.get("maximum").and_then(|n| n.as_f64()) {
             if num > max {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Number {} is greater than maximum {}", num, max),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Number ");
+                let mut buf = DtoaBuffer::new();
+                msg.push_str(buf.format(num));
+                msg.push_str(" is greater than maximum ");
+                let mut buf2 = DtoaBuffer::new();
+                msg.push_str(buf2.format(max));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
         // Exclusive min/max
         if let Some(min) = schema.get("exclusiveMinimum").and_then(|n| n.as_f64()) {
             if num <= min {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Number {} is not greater than exclusive minimum {}", num, min),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Number ");
+                let mut buf = DtoaBuffer::new();
+                msg.push_str(buf.format(num));
+                msg.push_str(" is not greater than exclusive minimum ");
+                let mut buf2 = DtoaBuffer::new();
+                msg.push_str(buf2.format(min));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
 
         if let Some(max) = schema.get("exclusiveMaximum").and_then(|n| n.as_f64()) {
             if num >= max {
-                errors.push(ValidationError::new(
-                    path,
-                    format!("Number {} is not less than exclusive maximum {}", num, max),
-                ));
+                let mut msg = ArrayString::<64>::new();
+                msg.push_str("Number ");
+                let mut buf = DtoaBuffer::new();
+                msg.push_str(buf.format(num));
+                msg.push_str(" is not less than exclusive maximum ");
+                let mut buf2 = DtoaBuffer::new();
+                msg.push_str(buf2.format(max));
+                errors.push(ValidationError::new(path, msg.as_str().to_owned()));
             }
         }
     }
@@ -330,8 +378,11 @@ impl SchemaValidator {
     fn has_unique_items(&self, arr: &[Node]) -> bool {
         let mut seen = HashSet::new();
         for item in arr {
-            let key = format!("{:?}", item);
-            if !seen.insert(key) {
+            // Use a stack-allocated buffer for small debug strings
+            let mut buf = ArrayString::<128>::new();
+            use core::fmt::Write;
+            let _ = write!(&mut buf, "{:?}", item);
+            if !seen.insert(buf) {
                 return false;
             }
         }

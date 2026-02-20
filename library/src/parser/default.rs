@@ -326,16 +326,17 @@ fn parse_string_with_config(
     source: &mut dyn ISource,
     config: &ParserConfig,
 ) -> Result<Node, String> {
-    // Use SmallVec for short strings to reduce heap allocations
-    use smallvec::SmallVec;
-    let capacity = config.max_string_length.unwrap_or(64).min(32);
-    let mut buf: SmallVec<[u8; 32]> = SmallVec::with_capacity(capacity);
+    // Use ArrayVec for short strings to reduce heap allocations
+    use arrayvec::ArrayVec;
+    let mut buf: ArrayVec<u8, 64> = ArrayVec::new();
+    let mut heap_buf: Option<Vec<u8>> = None;
     source.next(); // Skip opening quote
 
     while let Some(c) = source.current() {
         // Check string length limit
+        let cur_len = if let Some(ref v) = heap_buf { v.len() } else { buf.len() };
         if let Some(max_len) = config.max_string_length {
-            if buf.len() >= max_len {
+            if cur_len >= max_len {
                 use arrayvec::ArrayString;
                 use core::fmt::Write;
                 let mut msg: ArrayString<64> = ArrayString::new();
@@ -347,28 +348,41 @@ fn parse_string_with_config(
         match c {
             QUOTE => {
                 source.next();
-                // Convert SmallVec<u8> to String
-                return Ok(Node::Str(unsafe { String::from_utf8_unchecked(buf.into_vec()) }));
+                // Convert buffer to String
+                if let Some(v) = heap_buf {
+                    return Ok(Node::Str(unsafe { String::from_utf8_unchecked(v) }));
+                } else {
+                    return Ok(Node::Str(unsafe { String::from_utf8_unchecked(buf.into_iter().collect()) }));
+                }
             }
             BACKSLASH => {
                 source.next();
+                let push_byte = |b: u8, buf: &mut ArrayVec<u8, 64>, heap_buf: &mut Option<Vec<u8>>| {
+                    if let Some(v) = heap_buf {
+                        v.push(b);
+                    } else if buf.try_push(b).is_err() {
+                        let mut v = buf.clone().into_iter().collect::<Vec<u8>>();
+                        v.push(b);
+                        *heap_buf = Some(v);
+                    }
+                };
                 match source.current() {
-                    Some('"') => buf.push(b'"'),
-                    Some('\\') => buf.push(b'\\'),
-                    Some('/') => buf.push(b'/'),
-                    Some('b') => buf.push(b'\x08'),
-                    Some('f') => buf.push(b'\x0c'),
-                    Some('n') => buf.push(b'\n'),
-                    Some('r') => buf.push(b'\r'),
-                    Some('t') => buf.push(b'\t'),
+                    Some('"') => push_byte(b'"', &mut buf, &mut heap_buf),
+                    Some('\\') => push_byte(b'\\', &mut buf, &mut heap_buf),
+                    Some('/') => push_byte(b'/', &mut buf, &mut heap_buf),
+                    Some('b') => push_byte(b'\x08', &mut buf, &mut heap_buf),
+                    Some('f') => push_byte(b'\x0c', &mut buf, &mut heap_buf),
+                    Some('n') => push_byte(b'\n', &mut buf, &mut heap_buf),
+                    Some('r') => push_byte(b'\r', &mut buf, &mut heap_buf),
+                    Some('t') => push_byte(b'\t', &mut buf, &mut heap_buf),
                     Some('u') => {
                         source.next();
-                        // Use SmallVec for hex buffer
-                        let mut hex: SmallVec<[u8; 4]> = SmallVec::with_capacity(4);
+                        // Use ArrayVec for hex buffer
+                        let mut hex: ArrayVec<u8, 4> = ArrayVec::new();
                         for _ in 0..4 {
                             match source.current() {
                                 Some(d) if d.is_ascii_hexdigit() => {
-                                    hex.push(d as u8);
+                                    let _ = hex.push(d as u8);
                                     source.next();
                                 }
                                 _ => return Err(ERR_INVALID_ESCAPE.to_string()),
@@ -379,7 +393,15 @@ fn parse_string_with_config(
                                 if let Some(ch) = char::from_u32(code) {
                                     let mut utf8_buf = [0u8; 4];
                                     let encoded = ch.encode_utf8(&mut utf8_buf);
-                                    buf.extend_from_slice(encoded.as_bytes());
+                                    for b in encoded.as_bytes() {
+                                        if let Some(ref mut v) = heap_buf {
+                                            v.push(*b);
+                                        } else if buf.try_push(*b).is_err() {
+                                            let mut v = buf.clone().into_iter().collect::<Vec<u8>>();
+                                            v.push(*b);
+                                            heap_buf = Some(v);
+                                        }
+                                    }
                                 } else {
                                     return Err(ERR_INVALID_ESCAPE.to_string());
                                 }
@@ -399,7 +421,15 @@ fn parse_string_with_config(
                 // Push UTF-8 bytes for char
                 let mut utf8_buf = [0u8; 4];
                 let encoded = c.encode_utf8(&mut utf8_buf);
-                buf.extend_from_slice(encoded.as_bytes());
+                for b in encoded.as_bytes() {
+                    if let Some(ref mut v) = heap_buf {
+                        v.push(*b);
+                    } else if buf.try_push(*b).is_err() {
+                        let mut v = buf.clone().into_iter().collect::<Vec<u8>>();
+                        v.push(*b);
+                        heap_buf = Some(v);
+                    }
+                }
                 source.next();
             }
         }
@@ -417,19 +447,20 @@ fn parse_string_with_config(
 /// # Returns
 /// * `Result<Node, String>` - Number Node or error message
 fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
-    let mut num_str = String::new();
+    use arrayvec::ArrayString;
+    let mut num_buf: ArrayString<32> = ArrayString::new();
     let mut is_float = false;
 
     // Handle negative numbers
     if source.current() == Some(MINUS) {
-        num_str.push(MINUS);
+        let _ = num_buf.push(MINUS);
         source.next();
     }
 
     while let Some(c) = source.current() {
         match c {
             '0'..='9' => {
-                num_str.push(c);
+                let _ = num_buf.push(c);
                 source.next();
             }
             DECIMAL_POINT => {
@@ -437,17 +468,17 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
                     return Err(ERR_MULTIPLE_DECIMAL.to_string());
                 }
                 is_float = true;
-                num_str.push(c);
+                let _ = num_buf.push(c);
                 source.next();
             }
             EXPONENT_LOWER | EXPONENT_UPPER => {
                 is_float = true;
-                num_str.push(c);
+                let _ = num_buf.push(c);
                 source.next();
 
                 if let Some(sign) = source.current() {
                     if sign == PLUS || sign == MINUS {
-                        num_str.push(sign);
+                        let _ = num_buf.push(sign);
                         source.next();
                     }
                 }
@@ -456,6 +487,7 @@ fn parse_number(source: &mut dyn ISource) -> Result<Node, String> {
         }
     }
 
+    let num_str: &str = num_buf.as_str();
     if is_float {
         match num_str.parse::<f64>() {
             Ok(n) => Ok(Node::Number(Numeric::Float(n))),

@@ -60,11 +60,18 @@ impl Node {
 
         /// Creates a Node::Array from a slice, using SmallVec for small arrays.
         pub fn from_slice(slice: &[Node]) -> Self {
+            use core::mem::MaybeUninit;
             let mut small: SmallVec<[Node; 8]> = SmallVec::new();
-            for item in slice {
-                small.push(item.clone());
+            if slice.len() <= 8 {
+                // For small slices, use stack allocation and clone
+                for item in slice {
+                    small.push(item.clone());
+                }
+                Node::Array(small.into_vec())
+            } else {
+                // For large slices, use Vec::from with clone
+                Node::Array(slice.to_vec())
             }
-            Node::Array(small.into_vec())
         }
 
         /// Creates a Node::Array from a Vec<Node> without cloning (zero-copy).
@@ -534,13 +541,21 @@ impl Node {
     pub fn merge_ref(&mut self, other: &Node) {
         match (self, other) {
             (Node::Object(self_map), Node::Object(other_map)) => {
+                // Fast path: if self_map is empty, just clone all from other_map
+                if self_map.is_empty() {
+                    self_map.extend(other_map.iter().map(|(k, v)| (k.clone(), v.clone())));
+                    return;
+                }
                 for (key, other_value) in other_map {
                     match self_map.entry(key.clone()) {
                         std::collections::hash_map::Entry::Occupied(mut entry) => {
                             if entry.get().is_object() && other_value.is_object() {
                                 entry.get_mut().merge_ref(other_value);
                             } else {
-                                entry.insert(other_value.clone());
+                                // Only clone if value is different
+                                if entry.get() != other_value {
+                                    entry.insert(other_value.clone());
+                                }
                             }
                         }
                         std::collections::hash_map::Entry::Vacant(entry) => {
@@ -549,7 +564,11 @@ impl Node {
                     }
                 }
             }
-            (this, other) => *this = other.clone(),
+            (this, other) => {
+                if this != other {
+                    *this = other.clone();
+                }
+            }
         }
     }
 

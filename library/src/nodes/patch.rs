@@ -9,10 +9,10 @@ use crate::nodes::json_pointer;
 
 #[cfg(not(feature = "std"))]
 use alloc::{
-    format,
     string::{String, ToString},
     vec::Vec,
 };
+use arrayvec::ArrayString;
 
 /// JSON Patch operation
 #[derive(Debug, Clone, PartialEq)]
@@ -133,7 +133,12 @@ fn remove_value(node: &mut Node, path: &str) -> Result<(), PatchError> {
     match json_pointer::remove(node, path) {
         Ok(Some(_)) => Ok(()),
         Ok(None) => Err(PatchError::new("Path not found")),
-        Err(e) => Err(PatchError::new(&format!("Invalid path: {}", e))),
+        Err(e) => {
+            let mut msg = ArrayString::<64>::new();
+            msg.push_str("Invalid path: ");
+            msg.push_str(&e);
+            Err(PatchError::new(msg.as_str().to_owned()))
+        }
     }
 }
 
@@ -161,7 +166,12 @@ fn move_value(node: &mut Node, from: &str, to: &str) -> Result<(), PatchError> {
     match json_pointer::remove(node, from) {
         Ok(Some(_)) => {},
         Ok(None) => return Err(PatchError::new("Failed to remove from source")),
-        Err(e) => return Err(PatchError::new(&format!("Invalid path: {}", e))),
+        Err(e) => {
+            let mut msg = ArrayString::<64>::new();
+            msg.push_str("Invalid path: ");
+            msg.push_str(&e);
+            return Err(PatchError::new(msg.as_str().to_owned()));
+        }
     }
     
     // Add to destination
@@ -185,10 +195,11 @@ fn test_value(node: &Node, path: &str, expected: &Node) -> Result<(), PatchError
     if actual == expected {
         Ok(())
     } else {
-        Err(PatchError::new(format!(
-            "Test failed: expected {:?}, got {:?}",
-            expected, actual
-        )))
+        // Use stack-allocated buffer for error message
+        let mut msg = ArrayString::<96>::new();
+        use core::fmt::Write;
+        let _ = write!(&mut msg, "Test failed: expected {:?}, got {:?}", expected, actual);
+        Err(PatchError::new(msg.as_str().to_owned()))
     }
 }
 
@@ -274,7 +285,12 @@ pub fn parse_patch(patch_doc: &Node) -> Result<Vec<PatchOp>, PatchError> {
                     value: value.clone(),
                 }
             }
-            _ => return Err(PatchError::new(format!("Unknown operation: {}", op_type))),
+            _ => {
+                let mut msg = ArrayString::<48>::new();
+                msg.push_str("Unknown operation: ");
+                msg.push_str(op_type);
+                return Err(PatchError::new(msg.as_str().to_owned()));
+            }
         };
         
         operations.push(op);
