@@ -523,26 +523,33 @@ impl Node {
     /// // node1 now has: {"a": "new", "b": "keep", "c": "added"}
     /// ```
     pub fn merge(&mut self, other: Node) {
+        self.merge_ref(&other);
+    }
+
+    /// Efficiently merges another node into this node by reference.
+    /// For objects, recursively merges keys. If both have the same key:
+    /// - If both values are objects, recursively merge them
+    /// - Otherwise, replaces the value
+    /// For non-objects, replaces self with other.
+    pub fn merge_ref(&mut self, other: &Node) {
         match (self, other) {
             (Node::Object(self_map), Node::Object(other_map)) => {
                 for (key, other_value) in other_map {
-                    match self_map.get_mut(&key) {
-                        Some(self_value) if self_value.is_object() && other_value.is_object() => {
-                            // Recursive merge for nested objects
-                            self_value.merge(other_value);
+                    match self_map.entry(key.clone()) {
+                        std::collections::hash_map::Entry::Occupied(mut entry) => {
+                            if entry.get().is_object() && other_value.is_object() {
+                                entry.get_mut().merge_ref(other_value);
+                            } else {
+                                entry.insert(other_value.clone());
+                            }
                         }
-                        Some(self_value) => {
-                            // Replace existing value
-                            *self_value = other_value;
-                        }
-                        None => {
-                            // Insert new value
-                            self_map.insert(key, other_value);
+                        std::collections::hash_map::Entry::Vacant(entry) => {
+                            entry.insert(other_value.clone());
                         }
                     }
                 }
             }
-            (this, other) => *this = other,
+            (this, other) => *this = other.clone(),
         }
     }
 

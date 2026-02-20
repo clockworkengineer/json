@@ -124,14 +124,12 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
         }
         Node::Object(entries) => {
             destination.add_bytes("{");
-            // Use SmallVec for small objects to reduce heap allocations
-            let mut temp: SmallVec<[usize; 8]> = SmallVec::new();
-            temp.extend(0..entries.len());
-            for (_index, idx) in temp.iter().enumerate() {
-                if *idx > 0 {
+            let mut first = true;
+            for (key, value) in entries {
+                if !first {
                     destination.add_bytes(",");
                 }
-                let (key, value) = entries.iter().nth(*idx).unwrap();
+                first = false;
                 write_escaped_string(key, destination);
                 destination.add_bytes(":");
                 stringify(value, destination)?;

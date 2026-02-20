@@ -14,7 +14,10 @@ use alloc::{format, string::String, vec::Vec};
 /// Helper function to write a bencode string directly
 #[inline]
 fn write_bencode_string(s: &str, destination: &mut dyn IDestination) {
-    destination.add_bytes(&format!("{}:", s.len()));
+    // Use stack-allocated buffer for length
+    let mut buf = itoa::Buffer::new();
+    destination.add_bytes(buf.format(s.len()));
+    destination.add_bytes(":");
     destination.add_bytes(s);
 }
 
@@ -30,14 +33,48 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
         Node::None => destination.add_bytes(""),
         Node::Boolean(value) => destination.add_bytes(if *value { "i1e" } else { "i0e" }),
         Node::Number(value) => match value {
-            Numeric::Integer(n) => destination.add_bytes(&format!("i{}e", n)),
-            Numeric::UInteger(n) => destination.add_bytes(&format!("i{}e", n)),
-            Numeric::Float(f) => destination.add_bytes(&format!("i{}e", f.round() as i64)),
-            Numeric::Byte(b) => destination.add_bytes(&format!("i{}e", b)),
-            Numeric::Int32(i) => destination.add_bytes(&format!("i{}e", i)),
-            Numeric::UInt32(u) => destination.add_bytes(&format!("i{}e", u)),
+            Numeric::Integer(n) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes("i");
+                destination.add_bytes(buf.format(*n));
+                destination.add_bytes("e");
+            }
+            Numeric::UInteger(n) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes("i");
+                destination.add_bytes(buf.format(*n));
+                destination.add_bytes("e");
+            }
+            Numeric::Float(f) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes("i");
+                destination.add_bytes(buf.format(f.round() as i64));
+                destination.add_bytes("e");
+            }
+            Numeric::Byte(b) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes("i");
+                destination.add_bytes(buf.format(*b));
+                destination.add_bytes("e");
+            }
+            Numeric::Int32(i) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes("i");
+                destination.add_bytes(buf.format(*i));
+                destination.add_bytes("e");
+            }
+            Numeric::UInt32(u) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes("i");
+                destination.add_bytes(buf.format(*u));
+                destination.add_bytes("e");
+            }
             #[allow(unreachable_patterns)]
-            _ => destination.add_bytes(&format!("i{:?}e", value)),
+            _ => {
+                destination.add_bytes("i");
+                destination.add_bytes(&format!("{:?}", value));
+                destination.add_bytes("e");
+            }
         },
         Node::Str(value) => write_bencode_string(value, destination),
         Node::Array(items) => {

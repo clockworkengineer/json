@@ -37,12 +37,30 @@ fn stringify_with_indent(node: &Node, destination: &mut dyn IDestination, indent
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
         // Handle different numeric types
         Node::Number(value) => match value {
-            Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
-            Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
-            Numeric::Float(f) => destination.add_bytes(&f.to_string()),
-            Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
-            Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
-            Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
+            Numeric::Integer(n) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes(buf.format(*n));
+            }
+            Numeric::UInteger(n) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes(buf.format(*n));
+            }
+            Numeric::Float(f) => {
+                let mut buf = dtoa::Buffer::new();
+                destination.add_bytes(buf.format(*f));
+            }
+            Numeric::Byte(b) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes(buf.format(*b as u64));
+            }
+            Numeric::Int32(i) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes(buf.format(*i));
+            }
+            Numeric::UInt32(u) => {
+                let mut buf = itoa::Buffer::new();
+                destination.add_bytes(buf.format(*u));
+            }
             #[allow(unreachable_patterns)]
             _ => destination.add_bytes(&format!("{:?}", value)),
         },

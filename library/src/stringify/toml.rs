@@ -88,7 +88,7 @@ fn stringify_str(s: &str, destination: &mut dyn IDestination) {
 /// * `b` - The boolean to convert
 /// * `destination` - The destination to write to
 fn stringify_bool(b: &bool, destination: &mut dyn IDestination) {
-    destination.add_bytes(&*b.to_string())
+    destination.add_bytes(if *b { "true" } else { "false" })
 }
 
 /// Converts a numeric value to its TOML string representation
@@ -99,20 +99,30 @@ fn stringify_bool(b: &bool, destination: &mut dyn IDestination) {
 /// * `destination` - The destination to write to
 fn stringify_number(value: &Numeric, destination: &mut dyn IDestination) {
     match value {
-        // Handles signed integer values
-        Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
-        // Handles unsigned integer values
-        Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
-        // Handles floating point numbers
-        Numeric::Float(f) => destination.add_bytes(&f.to_string()),
-        // Handles 8-bit unsigned values (0-255)
-        Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
-        // Handles 32-bit signed integers (-2^31 to 2^31-1)
-        Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
-        // Handles 32-bit unsigned integers (0 to 2^32-1)
-        Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
-        // Fallback for any future numeric variants
-        // If there are any other variants, add them here
+        Numeric::Integer(n) => {
+            let mut buf = itoa::Buffer::new();
+            destination.add_bytes(buf.format(*n));
+        }
+        Numeric::UInteger(n) => {
+            let mut buf = itoa::Buffer::new();
+            destination.add_bytes(buf.format(*n));
+        }
+        Numeric::Float(f) => {
+            let mut buf = dtoa::Buffer::new();
+            destination.add_bytes(buf.format(*f));
+        }
+        Numeric::Byte(b) => {
+            let mut buf = itoa::Buffer::new();
+            destination.add_bytes(buf.format(*b));
+        }
+        Numeric::Int32(i) => {
+            let mut buf = itoa::Buffer::new();
+            destination.add_bytes(buf.format(*i));
+        }
+        Numeric::UInt32(u) => {
+            let mut buf = itoa::Buffer::new();
+            destination.add_bytes(buf.format(*u));
+        }
         #[allow(unreachable_patterns)]
         _ => destination.add_bytes(&format!("{:?}", value)),
     }
