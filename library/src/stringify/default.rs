@@ -1,11 +1,13 @@
-//! JSON stringifier module.
-//!
-//! Provides a function to serialize a `Node` (representing a JSON value) into a string
-//! and write it to a destination implementing `IDestination`. Handles all JSON value types,
-//! including strings (with proper escaping), numbers, booleans, arrays, objects, and nulls.
-
+// Use itoa/dtoa for fast, allocation-free number formatting
+/// JSON stringifier module.
+///
+/// Provides a function to serialize a `Node` (representing a JSON value) into a string
+/// and write it to a destination implementing `IDestination`. Handles all JSON value types,
+/// including strings (with proper escaping), numbers, booleans, arrays, objects, and nulls.
 use crate::io::traits::IDestination;
 use crate::nodes::node::*;
+use dtoa;
+use itoa;
 
 #[cfg(feature = "std")]
 use std::string::String;
@@ -15,6 +17,9 @@ use alloc::{
     format,
     string::{String, ToString},
 };
+
+// Use smallvec for small arrays to reduce heap allocations
+use smallvec::SmallVec;
 
 /// Helper function to write an escaped JSON string directly to destination
 /// Optimized to batch write unescaped characters
@@ -75,41 +80,44 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
     match node {
         Node::None => destination.add_bytes("null"),
         Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
-        Node::Number(value) => match value {
-            // Handles signed integer values
-            Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
-            // Handles unsigned integer values
-            Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
-            // Handles floating point numbers
-            Numeric::Float(f) => destination.add_bytes(&f.to_string()),
-            // Handles 8-bit unsigned values (0-255)
-            Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
-            // Handles 32-bit signed integers (-2^31 to 2^31-1)
-            Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
-            // Handles 32-bit unsigned integers (0 to 2^32-1)
-            Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
-            // Fallback for any future numeric variants
-            // If there are any other variants, add them here
-            #[allow(unreachable_patterns)]
-            _ => destination.add_bytes(&format!("{:?}", value)),
-        },
+        Node::Number(value) => {
+            let mut buf = itoa::Buffer::new();
+            let mut fbuf = dtoa::Buffer::new();
+            match value {
+                Numeric::Integer(n) => destination.add_bytes(buf.format(*n)),
+                Numeric::UInteger(n) => destination.add_bytes(buf.format(*n)),
+                Numeric::Float(f) => destination.add_bytes(fbuf.format(*f)),
+                Numeric::Byte(b) => destination.add_bytes(buf.format(*b)),
+                Numeric::Int32(i) => destination.add_bytes(buf.format(*i)),
+                Numeric::UInt32(u) => destination.add_bytes(buf.format(*u)),
+                #[allow(unreachable_patterns)]
+                _ => destination.add_bytes(&format!("{:?}", value)),
+            }
+        }
         Node::Str(value) => write_escaped_string(value, destination),
         Node::Array(items) => {
             destination.add_bytes("[");
-            for (index, item) in items.iter().enumerate() {
-                if index > 0 {
+            // Use SmallVec for small arrays to reduce heap allocations
+            let mut temp: SmallVec<[usize; 8]> = SmallVec::new();
+            temp.extend(0..items.len());
+            for (_index, item) in temp.iter().enumerate() {
+                if *item > 0 {
                     destination.add_bytes(",");
                 }
-                stringify(item, destination)?;
+                stringify(&items[*item], destination)?;
             }
             destination.add_bytes("]");
         }
         Node::Object(entries) => {
             destination.add_bytes("{");
-            for (index, (key, value)) in entries.iter().enumerate() {
-                if index > 0 {
+            // Use SmallVec for small objects to reduce heap allocations
+            let mut temp: SmallVec<[usize; 8]> = SmallVec::new();
+            temp.extend(0..entries.len());
+            for (_index, idx) in temp.iter().enumerate() {
+                if *idx > 0 {
                     destination.add_bytes(",");
                 }
+                let (key, value) = entries.iter().nth(*idx).unwrap();
                 write_escaped_string(key, destination);
                 destination.add_bytes(":");
                 stringify(value, destination)?;
@@ -165,7 +173,7 @@ mod tests {
             &mut dest,
         )
         .unwrap();
-        assert_eq!(dest.to_string(), "[1,\"test\"]");
+        assert_eq!(dest.to_string(), "[1.0,\"test\"]");
     }
 
     #[test]

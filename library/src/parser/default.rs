@@ -19,6 +19,9 @@ use alloc::{
     vec::Vec,
 };
 
+// Use smallvec for small arrays to reduce heap allocations
+use smallvec::SmallVec;
+
 /// Constants used for JSON parsing
 /// These define the special characters and starting characters
 /// used to identify different JSON elements like objects, arrays,
@@ -167,20 +170,22 @@ fn parse_object_with_config(
     config: &ParserConfig,
     depth: usize,
 ) -> Result<Node, String> {
-    let mut map = HashMap::new();
+    // Use SmallVec for small objects to reduce heap allocations
+    let mut pairs: SmallVec<[(String, Node); 8]> = SmallVec::new();
     source.next(); // Skip '{'
 
     skip_whitespace(source);
 
     if let Some(OBJECT_END) = source.current() {
         source.next();
-        return Ok(Node::Object(map));
+        // Build HashMap from pairs (empty)
+        return Ok(Node::Object(HashMap::new()));
     }
 
     loop {
         // Check object size limit
         if let Some(max_size) = config.max_object_size {
-            if map.len() >= max_size {
+            if pairs.len() >= max_size {
                 return Err(format!("Maximum object size of {} exceeded", max_size));
             }
         }
@@ -205,7 +210,7 @@ fn parse_object_with_config(
 
         // Parse value with incremented depth
         let value = parse_value(source, config, depth + 1)?;
-        map.insert(key, value);
+        pairs.push((key, value));
 
         skip_whitespace(source);
 
@@ -222,6 +227,11 @@ fn parse_object_with_config(
         }
     }
 
+    // Build HashMap from pairs
+    let mut map = HashMap::with_capacity(pairs.len());
+    for (k, v) in pairs {
+        map.insert(k, v);
+    }
     Ok(Node::Object(map))
 }
 
@@ -244,14 +254,15 @@ fn parse_array_with_config(
     config: &ParserConfig,
     depth: usize,
 ) -> Result<Node, String> {
-    let mut vec = Vec::new();
+    // Use SmallVec for small arrays to reduce heap allocations
+    let mut vec: SmallVec<[Node; 8]> = SmallVec::new();
     source.next(); // Skip '['
 
     skip_whitespace(source);
 
     if let Some(ARRAY_END) = source.current() {
         source.next();
-        return Ok(Node::Array(vec));
+        return Ok(Node::Array(vec.into_vec()));
     }
 
     loop {
@@ -280,7 +291,8 @@ fn parse_array_with_config(
         }
     }
 
-    Ok(Node::Array(vec))
+    // Convert SmallVec to Vec for Node::Array
+    Ok(Node::Array(vec.into_vec()))
 }
 
 /// Parses a JSON string with support for escape sequences
@@ -301,15 +313,16 @@ fn parse_string_with_config(
     source: &mut dyn ISource,
     config: &ParserConfig,
 ) -> Result<Node, String> {
-    // Pre-allocate capacity based on limit or use a reasonable default
-    let capacity = config.max_string_length.unwrap_or(64).min(1024);
-    let mut s = String::with_capacity(capacity);
+    // Use SmallVec for short strings to reduce heap allocations
+    use smallvec::SmallVec;
+    let capacity = config.max_string_length.unwrap_or(64).min(32);
+    let mut buf: SmallVec<[u8; 32]> = SmallVec::with_capacity(capacity);
     source.next(); // Skip opening quote
 
     while let Some(c) = source.current() {
         // Check string length limit
         if let Some(max_len) = config.max_string_length {
-            if s.len() >= max_len {
+            if buf.len() >= max_len {
                 return Err(format!(
                     "Maximum string length of {} bytes exceeded",
                     max_len
@@ -320,34 +333,42 @@ fn parse_string_with_config(
         match c {
             QUOTE => {
                 source.next();
-                return Ok(Node::Str(s));
+                // Convert SmallVec<u8> to String
+                return Ok(Node::Str(unsafe { String::from_utf8_unchecked(buf.into_vec()) }));
             }
             BACKSLASH => {
                 source.next();
                 match source.current() {
-                    Some('"') => s.push('"'),
-                    Some('\\') => s.push('\\'),
-                    Some('/') => s.push('/'),
-                    Some('b') => s.push('\x08'),
-                    Some('f') => s.push('\x0c'),
-                    Some('n') => s.push('\n'),
-                    Some('r') => s.push('\r'),
-                    Some('t') => s.push('\t'),
+                    Some('"') => buf.push(b'"'),
+                    Some('\\') => buf.push(b'\\'),
+                    Some('/') => buf.push(b'/'),
+                    Some('b') => buf.push(b'\x08'),
+                    Some('f') => buf.push(b'\x0c'),
+                    Some('n') => buf.push(b'\n'),
+                    Some('r') => buf.push(b'\r'),
+                    Some('t') => buf.push(b'\t'),
                     Some('u') => {
                         source.next();
-                        let mut hex = String::with_capacity(4);
+                        // Use SmallVec for hex buffer
+                        let mut hex: SmallVec<[u8; 4]> = SmallVec::with_capacity(4);
                         for _ in 0..4 {
                             match source.current() {
                                 Some(d) if d.is_ascii_hexdigit() => {
-                                    hex.push(d);
+                                    hex.push(d as u8);
                                     source.next();
                                 }
                                 _ => return Err(ERR_INVALID_ESCAPE.to_string()),
                             }
                         }
-                        if let Ok(code) = u32::from_str_radix(&hex, 16) {
-                            if let Some(ch) = char::from_u32(code) {
-                                s.push(ch);
+                        if let Ok(hex_str) = core::str::from_utf8(&hex) {
+                            if let Ok(code) = u32::from_str_radix(hex_str, 16) {
+                                if let Some(ch) = char::from_u32(code) {
+                                    let mut utf8_buf = [0u8; 4];
+                                    let encoded = ch.encode_utf8(&mut utf8_buf);
+                                    buf.extend_from_slice(encoded.as_bytes());
+                                } else {
+                                    return Err(ERR_INVALID_ESCAPE.to_string());
+                                }
                             } else {
                                 return Err(ERR_INVALID_ESCAPE.to_string());
                             }
@@ -361,7 +382,10 @@ fn parse_string_with_config(
                 source.next();
             }
             _ => {
-                s.push(c);
+                // Push UTF-8 bytes for char
+                let mut utf8_buf = [0u8; 4];
+                let encoded = c.encode_utf8(&mut utf8_buf);
+                buf.extend_from_slice(encoded.as_bytes());
                 source.next();
             }
         }

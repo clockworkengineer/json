@@ -4,6 +4,9 @@ use std::collections::HashMap;
 #[cfg(not(feature = "std"))]
 use alloc::{collections::BTreeMap as HashMap, string::String, vec::Vec};
 
+// Use smallvec for small arrays to reduce heap allocations
+use smallvec::SmallVec;
+
 #[cfg(feature = "std")]
 use core::ops::{Index, IndexMut};
 
@@ -38,7 +41,7 @@ pub enum Node {
     /// Represents a string value
     Str(String),
     /// Represents an array of other nodes
-    Array(Vec<Node>),
+    Array(Vec<Node>), // Internally, we may use SmallVec for construction
     /// Represents an object/map of string keys to node values
     Object(HashMap<String, Node>),
     /// Represents a null value or uninitialized node
@@ -46,6 +49,23 @@ pub enum Node {
 }
 
 impl Node {
+        /// Creates a Node::Array from an iterator, using SmallVec for small arrays
+        pub fn from_iter<I: IntoIterator<Item = Node>>(iter: I) -> Self {
+            let mut small: SmallVec<[Node; 8]> = SmallVec::new();
+            for item in iter {
+                small.push(item);
+            }
+            Node::Array(small.into_vec())
+        }
+
+        /// Creates a Node::Array from a slice, using SmallVec for small arrays
+        pub fn from_slice(slice: &[Node]) -> Self {
+            let mut small: SmallVec<[Node; 8]> = SmallVec::new();
+            for item in slice {
+                small.push(item.clone());
+            }
+            Node::Array(small.into_vec())
+        }
     /// Safely gets a value from an object by key without panicking
     ///
     /// # Arguments
