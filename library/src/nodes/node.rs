@@ -58,7 +58,7 @@ impl Node {
             Node::Array(small.into_vec())
         }
 
-        /// Creates a Node::Array from a slice, using SmallVec for small arrays
+        /// Creates a Node::Array from a slice, using SmallVec for small arrays.
         pub fn from_slice(slice: &[Node]) -> Self {
             let mut small: SmallVec<[Node; 8]> = SmallVec::new();
             for item in slice {
@@ -66,6 +66,12 @@ impl Node {
             }
             Node::Array(small.into_vec())
         }
+
+        /// Creates a Node::Array from a Vec<Node> without cloning (zero-copy).
+        pub fn from_vec(vec: Vec<Node>) -> Self {
+            Node::Array(vec)
+        }
+
     /// Safely gets a value from an object by key without panicking
     ///
     /// # Arguments

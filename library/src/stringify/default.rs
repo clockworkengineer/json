@@ -51,7 +51,21 @@ fn write_escaped_string(s: &str, destination: &mut dyn IDestination) {
                 b'\n' => destination.add_bytes("\\n"),
                 b'\r' => destination.add_bytes("\\r"),
                 b'\t' => destination.add_bytes("\\t"),
-                b => destination.add_bytes(&format!("\\u{:04x}", b as u32)),
+                b => {
+                    // Manual formatting for \uXXXX
+                    let b = b as u32;
+                    let mut buf = [b'\\', b'u', b'0', b'0', b'0', b'0'];
+                    // Write hex digits
+                    for j in (2..6).rev() {
+                        let digit = (b >> (4 * (5 - j))) & 0xF;
+                        buf[j] = match digit {
+                            0..=9 => b'0' + digit as u8,
+                            10..=15 => b'a' + (digit as u8 - 10),
+                            _ => b'?',
+                        };
+                    }
+                    destination.add_bytes(core::str::from_utf8(&buf).unwrap());
+                }
             }
 
             i += 1;
@@ -91,7 +105,7 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
                 Numeric::Int32(i) => destination.add_bytes(buf.format(*i)),
                 Numeric::UInt32(u) => destination.add_bytes(buf.format(*u)),
                 #[allow(unreachable_patterns)]
-                _ => destination.add_bytes(&format!("{:?}", value)),
+                _ => destination.add_bytes("null"), // fallback for unknown numeric type
             }
         }
         Node::Str(value) => write_escaped_string(value, destination),

@@ -118,7 +118,11 @@ fn parse_value(
     // Check depth limit
     if let Some(max_depth) = config.max_depth {
         if depth >= max_depth {
-            return Err(format!("Maximum nesting depth of {} exceeded", max_depth));
+            use arrayvec::ArrayString;
+            use core::fmt::Write;
+            let mut msg: ArrayString<64> = ArrayString::new();
+            let _ = write!(&mut msg, "Maximum nesting depth of {} exceeded", max_depth);
+            return Err(msg.to_string());
         }
     }
 
@@ -186,7 +190,11 @@ fn parse_object_with_config(
         // Check object size limit
         if let Some(max_size) = config.max_object_size {
             if pairs.len() >= max_size {
-                return Err(format!("Maximum object size of {} exceeded", max_size));
+                use arrayvec::ArrayString;
+                use core::fmt::Write;
+                let mut msg: ArrayString<64> = ArrayString::new();
+                let _ = write!(&mut msg, "Maximum object size of {} exceeded", max_size);
+                return Err(msg.to_string());
             }
         }
 
@@ -228,7 +236,8 @@ fn parse_object_with_config(
     }
 
     // Build HashMap from pairs
-    let mut map = HashMap::with_capacity(pairs.len());
+    // Use a higher initial capacity to reduce rehashing (Rust's default load factor is 0.75)
+    let mut map = HashMap::with_capacity((pairs.len() * 4) / 3 + 1);
     for (k, v) in pairs {
         map.insert(k, v);
     }
@@ -269,7 +278,11 @@ fn parse_array_with_config(
         // Check array size limit
         if let Some(max_size) = config.max_array_size {
             if vec.len() >= max_size {
-                return Err(format!("Maximum array size of {} exceeded", max_size));
+                use arrayvec::ArrayString;
+                use core::fmt::Write;
+                let mut msg: ArrayString<64> = ArrayString::new();
+                let _ = write!(&mut msg, "Maximum array size of {} exceeded", max_size);
+                return Err(msg.to_string());
             }
         }
 
@@ -323,10 +336,11 @@ fn parse_string_with_config(
         // Check string length limit
         if let Some(max_len) = config.max_string_length {
             if buf.len() >= max_len {
-                return Err(format!(
-                    "Maximum string length of {} bytes exceeded",
-                    max_len
-                ));
+                use arrayvec::ArrayString;
+                use core::fmt::Write;
+                let mut msg: ArrayString<64> = ArrayString::new();
+                let _ = write!(&mut msg, "Maximum string length of {} bytes exceeded", max_len);
+                return Err(msg.to_string());
             }
         }
 
