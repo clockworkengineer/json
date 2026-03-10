@@ -60,7 +60,7 @@ impl Node {
 
     /// Creates a Node::Array from a slice, using SmallVec for small arrays.
     pub fn from_slice(slice: &[Node]) -> Self {
-        use core::mem::MaybeUninit;
+        
         let mut small: SmallVec<[Node; 8]> = SmallVec::new();
         if slice.len() <= 8 {
             // For small slices, use stack allocation and clone

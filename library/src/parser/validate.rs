@@ -5,16 +5,7 @@
 
 use crate::io::traits::ISource;
 use crate::parser::config::ParserConfig;
-
-const BACKSLASH: char = '\\';
-const COMMA: char = ',';
-const DECIMAL_POINT: char = '.';
-const QUOTE: char = '"';
-const COLON: char = ':';
-const L_BRACE: char = '{';
-const R_BRACE: char = '}';
-const L_BRACKET: char = '[';
-const R_BRACKET: char = ']';
+use crate::parser::constants::*;
 
 /// Validates JSON syntax without allocating memory for nodes
 ///
@@ -55,8 +46,8 @@ fn validate_value(
     skip_whitespace(source);
 
     match source.current() {
-        Some(L_BRACE) => validate_object(source, config, depth),
-        Some(L_BRACKET) => validate_array(source, config, depth),
+        Some(OBJECT_START) => validate_object(source, config, depth),
+        Some(ARRAY_START) => validate_array(source, config, depth),
         Some(QUOTE) => validate_string(source, config),
         Some('t') | Some('f') => validate_boolean(source),
         Some('n') => validate_null(source),
@@ -84,7 +75,7 @@ fn validate_object(
     let mut size = 0;
 
     // Empty object
-    if source.current() == Some(R_BRACE) {
+    if source.current() == Some(OBJECT_END) {
         source.next();
         *depth -= 1;
         return Ok(());
@@ -122,11 +113,11 @@ fn validate_object(
                 source.next();
                 skip_whitespace(source);
                 // Check for trailing comma
-                if source.current() == Some(R_BRACE) {
+                if source.current() == Some(OBJECT_END) {
                     return Err("Trailing comma in object".to_string());
                 }
             }
-            Some(R_BRACE) => {
+            Some(OBJECT_END) => {
                 source.next();
                 *depth -= 1;
                 return Ok(());
@@ -154,7 +145,7 @@ fn validate_array(
     let mut size = 0;
 
     // Empty array
-    if source.current() == Some(R_BRACKET) {
+    if source.current() == Some(ARRAY_END) {
         source.next();
         *depth -= 1;
         return Ok(());
@@ -176,11 +167,11 @@ fn validate_array(
                 source.next();
                 skip_whitespace(source);
                 // Check for trailing comma
-                if source.current() == Some(R_BRACKET) {
+                if source.current() == Some(ARRAY_END) {
                     return Err("Trailing comma in array".to_string());
                 }
             }
-            Some(R_BRACKET) => {
+            Some(ARRAY_END) => {
                 source.next();
                 *depth -= 1;
                 return Ok(());

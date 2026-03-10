@@ -2,6 +2,9 @@
 //! Implements parsing of JSON text into internal data structures
 //! Supports standard JSON types and syntax validation
 
+/// Shared character constants for JSON syntax
+pub mod constants;
+
 /// Parser configuration for resource limits
 pub mod config;
 

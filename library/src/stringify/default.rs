@@ -6,6 +6,7 @@
 /// including strings (with proper escaping), numbers, booleans, arrays, objects, and nulls.
 use crate::io::traits::IDestination;
 use crate::nodes::node::*;
+use crate::stringify::escape::*;
 use dtoa;
 use itoa;
 
@@ -13,75 +14,10 @@ use itoa;
 use std::string::String;
 
 #[cfg(not(feature = "std"))]
-use alloc::{
-    format,
-    string::{String, ToString},
-};
+use alloc::string::{String, ToString};
 
 // Use smallvec for small arrays to reduce heap allocations
 use smallvec::SmallVec;
-
-/// Helper function to write an escaped JSON string directly to destination
-/// Optimized to batch write unescaped characters
-#[inline]
-fn write_escaped_string(s: &str, destination: &mut dyn IDestination) {
-    destination.add_bytes("\"");
-
-    let bytes = s.as_bytes();
-    let mut start = 0;
-    let mut i = 0;
-
-    while i < bytes.len() {
-        let needs_escape = match bytes[i] {
-            b'"' | b'\\' | b'\n' | b'\r' | b'\t' => true,
-            b if b < 32 => true, // Control characters
-            _ => false,
-        };
-
-        if needs_escape {
-            // Write accumulated unescaped bytes
-            if i > start {
-                destination.add_bytes(core::str::from_utf8(&bytes[start..i]).unwrap());
-            }
-
-            // Write escape sequence
-            match bytes[i] {
-                b'"' => destination.add_bytes("\\\""),
-                b'\\' => destination.add_bytes("\\\\"),
-                b'\n' => destination.add_bytes("\\n"),
-                b'\r' => destination.add_bytes("\\r"),
-                b'\t' => destination.add_bytes("\\t"),
-                b => {
-                    // Manual formatting for \uXXXX
-                    let b = b as u32;
-                    let mut buf = [b'\\', b'u', b'0', b'0', b'0', b'0'];
-                    // Write hex digits
-                    for j in (2..6).rev() {
-                        let digit = (b >> (4 * (5 - j))) & 0xF;
-                        buf[j] = match digit {
-                            0..=9 => b'0' + digit as u8,
-                            10..=15 => b'a' + (digit as u8 - 10),
-                            _ => b'?',
-                        };
-                    }
-                    destination.add_bytes(core::str::from_utf8(&buf).unwrap());
-                }
-            }
-
-            i += 1;
-            start = i;
-        } else {
-            i += 1;
-        }
-    }
-
-    // Write any remaining unescaped bytes
-    if start < bytes.len() {
-        destination.add_bytes(core::str::from_utf8(&bytes[start..]).unwrap());
-    }
-
-    destination.add_bytes("\"");
-}
 
 /// Serializes a `Node` into JSON and writes it to the given destination.
 ///
@@ -92,8 +28,8 @@ fn write_escaped_string(s: &str, destination: &mut dyn IDestination) {
 
 pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match node {
-        Node::None => destination.add_bytes("null"),
-        Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
+        Node::None => destination.add_bytes(JSON_NULL),
+        Node::Boolean(value) => destination.add_bytes(if *value { JSON_TRUE } else { JSON_FALSE }),
         Node::Number(value) => {
             let mut buf = itoa::Buffer::new();
             let mut fbuf = dtoa::Buffer::new();
@@ -105,36 +41,36 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
                 Numeric::Int32(i) => destination.add_bytes(buf.format(*i)),
                 Numeric::UInt32(u) => destination.add_bytes(buf.format(*u)),
                 #[allow(unreachable_patterns)]
-                _ => destination.add_bytes("null"), // fallback for unknown numeric type
+                _ => destination.add_bytes(JSON_NULL), // fallback for unknown numeric type
             }
         }
         Node::Str(value) => write_escaped_string(value, destination),
         Node::Array(items) => {
-            destination.add_bytes("[");
+            destination.add_bytes(STR_ARRAY_START);
             // Use SmallVec for small arrays to reduce heap allocations
             let mut temp: SmallVec<[usize; 8]> = SmallVec::new();
             temp.extend(0..items.len());
             for (_index, item) in temp.iter().enumerate() {
                 if *item > 0 {
-                    destination.add_bytes(",");
+                    destination.add_bytes(STR_COMMA);
                 }
                 stringify(&items[*item], destination)?;
             }
-            destination.add_bytes("]");
+            destination.add_bytes(STR_ARRAY_END);
         }
         Node::Object(entries) => {
-            destination.add_bytes("{");
+            destination.add_bytes(STR_OBJECT_START);
             let mut first = true;
             for (key, value) in entries {
                 if !first {
-                    destination.add_bytes(",");
+                    destination.add_bytes(STR_COMMA);
                 }
                 first = false;
                 write_escaped_string(key, destination);
-                destination.add_bytes(":");
+                destination.add_bytes(STR_COLON);
                 stringify(value, destination)?;
             }
-            destination.add_bytes("}");
+            destination.add_bytes(STR_OBJECT_END);
         }
     }
     Ok(())

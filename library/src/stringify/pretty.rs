@@ -2,72 +2,13 @@
 
 use crate::io::traits::IDestination;
 use crate::nodes::node::*;
+use crate::stringify::escape::*;
 
 #[cfg(feature = "std")]
 use std::string::String;
 
 #[cfg(not(feature = "std"))]
-use alloc::{
-    format,
-    string::{String, ToString},
-};
-
-/// Helper function to write an escaped JSON string
-#[inline]
-fn write_escaped_string(s: &str, destination: &mut dyn IDestination) {
-    destination.add_bytes("\"");
-
-    let bytes = s.as_bytes();
-    let mut start = 0;
-    let mut i = 0;
-
-    while i < bytes.len() {
-        let needs_escape = match bytes[i] {
-            b'"' | b'\\' | b'\n' | b'\r' | b'\t' => true,
-            b if b < 32 => true,
-            _ => false,
-        };
-
-        if needs_escape {
-            if i > start {
-                destination.add_bytes(core::str::from_utf8(&bytes[start..i]).unwrap());
-            }
-
-            match bytes[i] {
-                b'"' => destination.add_bytes("\\\""),
-                b'\\' => destination.add_bytes("\\\\"),
-                b'\n' => destination.add_bytes("\\n"),
-                b'\r' => destination.add_bytes("\\r"),
-                b'\t' => destination.add_bytes("\\t"),
-                b => {
-                    // Manual formatting for \uXXXX
-                    let b = b as u32;
-                    let mut buf = [b'\\', b'u', b'0', b'0', b'0', b'0'];
-                    for j in (2..6).rev() {
-                        let digit = (b >> (4 * (5 - j))) & 0xF;
-                        buf[j] = match digit {
-                            0..=9 => b'0' + digit as u8,
-                            10..=15 => b'a' + (digit as u8 - 10),
-                            _ => b'?',
-                        };
-                    }
-                    destination.add_bytes(core::str::from_utf8(&buf).unwrap());
-                }
-            }
-
-            i += 1;
-            start = i;
-        } else {
-            i += 1;
-        }
-    }
-
-    if start < bytes.len() {
-        destination.add_bytes(core::str::from_utf8(&bytes[start..]).unwrap());
-    }
-
-    destination.add_bytes("\"");
-}
+use alloc::string::{String, ToString};
 
 /// Serializes a `Node` into pretty-printed JSON
 ///
@@ -90,8 +31,8 @@ fn stringify_pretty_internal(
     depth: usize,
 ) -> Result<(), String> {
     match node {
-        Node::None => destination.add_bytes("null"),
-        Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
+        Node::None => destination.add_bytes(JSON_NULL),
+        Node::Boolean(value) => destination.add_bytes(if *value { JSON_TRUE } else { JSON_FALSE }),
         Node::Number(value) => match value {
             Numeric::Integer(n) => {
                 let mut buf = itoa::Buffer::new();
@@ -143,7 +84,7 @@ fn stringify_pretty_internal(
                     }
                     stringify_pretty_internal(item, destination, indent, depth + 1)?;
                     if index < items.len() - 1 {
-                        destination.add_bytes(",");
+                        destination.add_bytes(STR_COMMA);
                     }
                     destination.add_bytes("\n");
                 }
@@ -151,7 +92,7 @@ fn stringify_pretty_internal(
                 for _ in 0..depth {
                     destination.add_bytes(indent);
                 }
-                destination.add_bytes("]");
+                destination.add_bytes(STR_ARRAY_END);
             }
         }
         Node::Object(map) => {
@@ -172,7 +113,7 @@ fn stringify_pretty_internal(
                     let value = map.get(*key).unwrap();
                     stringify_pretty_internal(value, destination, indent, depth + 1)?;
                     if index < keys.len() - 1 {
-                        destination.add_bytes(",");
+                        destination.add_bytes(STR_COMMA);
                     }
                     destination.add_bytes("\n");
                 }
@@ -180,7 +121,7 @@ fn stringify_pretty_internal(
                 for _ in 0..depth {
                     destination.add_bytes(indent);
                 }
-                destination.add_bytes("}");
+                destination.add_bytes(STR_OBJECT_END);
             }
         }
     }

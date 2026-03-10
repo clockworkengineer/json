@@ -7,98 +7,27 @@
 
 use crate::io::traits::IDestination;
 use crate::nodes::node::*;
+use crate::stringify::escape::*;
 
 #[cfg(feature = "std")]
 use std::string::String;
 
 #[cfg(not(feature = "std"))]
-use alloc::{
-    format,
-    string::{String, ToString},
-};
+use alloc::string::{String, ToString};
 
-/// Check if a string needs escaping
-/// Returns true if the string contains only safe ASCII characters
-#[inline]
-fn needs_escaping(s: &str) -> bool {
-    let bytes = s.as_bytes();
-    for &b in bytes {
-        match b {
-            b'"' | b'\\' | b'\n' | b'\r' | b'\t' => return true,
-            b if b < 32 => return true,
-            _ => {}
-        }
-    }
-    false
-}
-
-/// Write a string without escaping (fast path)
+/// Write a string without escaping (fast path when `needs_escaping` returns false)
 #[inline]
 fn write_simple_string(s: &str, destination: &mut dyn IDestination) {
-    destination.add_bytes("\"");
+    destination.add_bytes(STR_QUOTE);
     destination.add_bytes(s);
-    destination.add_bytes("\"");
-}
-
-/// Write an escaped JSON string with optimized batching
-#[inline]
-fn write_escaped_string(s: &str, destination: &mut dyn IDestination) {
-    // Fast path: if no escaping needed, write directly
-    if !needs_escaping(s) {
-        write_simple_string(s, destination);
-        return;
-    }
-
-    // Slow path: escape as needed
-    destination.add_bytes("\"");
-
-    let bytes = s.as_bytes();
-    let mut start = 0;
-    let mut i = 0;
-
-    while i < bytes.len() {
-        let needs_escape = match bytes[i] {
-            b'"' | b'\\' | b'\n' | b'\r' | b'\t' => true,
-            b if b < 32 => true,
-            _ => false,
-        };
-
-        if needs_escape {
-            // Write accumulated unescaped bytes in one call
-            if i > start {
-                destination.add_bytes(core::str::from_utf8(&bytes[start..i]).unwrap());
-            }
-
-            // Write escape sequence
-            match bytes[i] {
-                b'"' => destination.add_bytes("\\\""),
-                b'\\' => destination.add_bytes("\\\\"),
-                b'\n' => destination.add_bytes("\\n"),
-                b'\r' => destination.add_bytes("\\r"),
-                b'\t' => destination.add_bytes("\\t"),
-                b => destination.add_bytes(&format!("\\u{:04x}", b as u32)),
-            }
-
-            i += 1;
-            start = i;
-        } else {
-            i += 1;
-        }
-    }
-
-    // Write any remaining unescaped bytes
-    if start < bytes.len() {
-        destination.add_bytes(core::str::from_utf8(&bytes[start..]).unwrap());
-    }
-
-    destination.add_bytes("\"");
+    destination.add_bytes(STR_QUOTE);
 }
 
 /// Optimized stringify with lazy escaping
 pub fn stringify_optimized(node: &Node, destination: &mut dyn IDestination) -> Result<(), String> {
     match node {
-        Node::None => destination.add_bytes("null"),
-        Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
+        Node::None => destination.add_bytes(JSON_NULL),
+        Node::Boolean(value) => destination.add_bytes(if *value { JSON_TRUE } else { JSON_FALSE }),
         Node::Number(value) => match value {
             Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
             Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
@@ -110,28 +39,34 @@ pub fn stringify_optimized(node: &Node, destination: &mut dyn IDestination) -> R
             Numeric::UInt16(u) => destination.add_bytes(&u.to_string()),
             Numeric::Int8(i) => destination.add_bytes(&i.to_string()),
         },
-        Node::Str(value) => write_escaped_string(value, destination),
+        Node::Str(value) => {
+            if needs_escaping(value) {
+                write_escaped_string(value, destination);
+            } else {
+                write_simple_string(value, destination);
+            }
+        }
         Node::Array(items) => {
-            destination.add_bytes("[");
+            destination.add_bytes(STR_ARRAY_START);
             for (index, item) in items.iter().enumerate() {
                 if index > 0 {
-                    destination.add_bytes(",");
+                    destination.add_bytes(STR_COMMA);
                 }
                 stringify_optimized(item, destination)?;
             }
-            destination.add_bytes("]");
+            destination.add_bytes(STR_ARRAY_END);
         }
         Node::Object(entries) => {
-            destination.add_bytes("{");
+            destination.add_bytes(STR_OBJECT_START);
             for (index, (key, value)) in entries.iter().enumerate() {
                 if index > 0 {
-                    destination.add_bytes(",");
+                    destination.add_bytes(STR_COMMA);
                 }
                 write_escaped_string(key, destination);
-                destination.add_bytes(":");
+                destination.add_bytes(STR_COLON);
                 stringify_optimized(value, destination)?;
             }
-            destination.add_bytes("}");
+            destination.add_bytes(STR_OBJECT_END);
         }
     }
     Ok(())

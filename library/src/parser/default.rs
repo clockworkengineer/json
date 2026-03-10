@@ -7,6 +7,7 @@ use crate::io::traits::ISource;
 use crate::nodes::node::Node;
 use crate::nodes::node::Numeric;
 use crate::parser::config::ParserConfig;
+use crate::parser::constants::*;
 
 #[cfg(feature = "std")]
 use std::collections::HashMap;
@@ -21,27 +22,6 @@ use alloc::{
 
 // Use smallvec for small arrays to reduce heap allocations
 use smallvec::SmallVec;
-
-/// Constants used for JSON parsing
-/// These define the special characters and starting characters
-/// used to identify different JSON elements like objects, arrays,
-/// strings, numbers and literals
-const OBJECT_START: char = '{';
-const OBJECT_END: char = '}';
-const ARRAY_START: char = '[';
-const ARRAY_END: char = ']';
-const QUOTE: char = '"';
-const COMMA: char = ',';
-const COLON: char = ':';
-const BACKSLASH: char = '\\';
-const TRUE_START: char = 't';
-const FALSE_START: char = 'f';
-const NULL_START: char = 'n';
-const MINUS: char = '-';
-const DECIMAL_POINT: char = '.';
-const EXPONENT_LOWER: char = 'e';
-const EXPONENT_UPPER: char = 'E';
-const PLUS: char = '+';
 
 /// Parses JSON input from a source and returns a Node representation
 ///
