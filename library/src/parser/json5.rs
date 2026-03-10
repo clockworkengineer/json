@@ -201,4 +201,198 @@ mod tests {
         let output = strip_comments(input);
         assert!(output.contains(r#"He said \"hello\" // not a comment"#));
     }
+
+    // strip_comments edge cases
+    #[test]
+    fn test_strip_empty_input() {
+        assert_eq!(strip_comments(""), "");
+    }
+
+    #[test]
+    fn test_strip_no_comments() {
+        let input = r#"{"a": 1, "b": "hello"}"#;
+        let output = strip_comments(input);
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_single_line_comment_at_start() {
+        let input = "// leading comment\n{\"a\":1}";
+        let output = strip_comments(input);
+        assert!(!output.contains("leading comment"));
+        assert!(output.contains("{\"a\":1}"));
+    }
+
+    #[test]
+    fn test_single_line_comment_no_trailing_newline() {
+        // Comment at end of file with no newline after
+        let input = "{\"a\":1} // trailing comment";
+        let output = strip_comments(input);
+        assert!(!output.contains("trailing comment"));
+        assert!(output.contains("{\"a\":1}"));
+    }
+
+    #[test]
+    fn test_multi_line_comment_inline() {
+        let input = r#"{"a": /* value */ 1}"#;
+        let output = strip_comments(input);
+        assert!(!output.contains("value"));
+        assert!(output.contains("\"a\""));
+        assert!(output.contains('1'));
+    }
+
+    #[test]
+    fn test_multi_line_comment_preserves_newline_count() {
+        let input = "{\n/* line1\nline2\nline3 */\n\"a\":1\n}";
+        let output = strip_comments(input);
+        // Newlines inside multi-line comments are preserved
+        assert_eq!(input.matches('\n').count(), output.matches('\n').count());
+    }
+
+    #[test]
+    fn test_slash_star_inside_string() {
+        let input = r#"{"regex": "a /* b"}"#;
+        let output = strip_comments(input);
+        assert!(output.contains("a /* b"));
+    }
+
+    #[test]
+    fn test_double_slash_inside_string() {
+        let input = r#"{"url": "https://example.com/path"}"#;
+        let output = strip_comments(input);
+        assert!(output.contains("https://example.com/path"));
+    }
+
+    #[test]
+    fn test_comment_after_string_value() {
+        let input = r#"{"key": "value"} // end"#;
+        let output = strip_comments(input);
+        assert!(!output.contains("end"));
+        assert!(output.contains("\"value\""));
+    }
+
+    #[test]
+    fn test_output_capacity_hint() {
+        // Output should never be longer than input (comments only removed)
+        let input = "// comment\n{\"a\":1}";
+        let output = strip_comments(input);
+        assert!(output.len() <= input.len() + 5); // +5 for preserved newlines
+    }
+
+    #[test]
+    fn test_strip_only_comments() {
+        let input = "// just a comment";
+        let output = strip_comments(input);
+        assert!(!output.contains("just a comment"));
+    }
+
+    #[test]
+    fn test_strip_block_comment_only() {
+        let input = "/* entire file is a comment */";
+        let output = strip_comments(input);
+        assert!(!output.contains("entire"));
+        assert_eq!(output.trim(), "");
+    }
+
+    #[test]
+    fn test_adjacent_comments() {
+        let input = "// comment1\n// comment2\n{\"a\":1}";
+        let output = strip_comments(input);
+        assert!(!output.contains("comment1"));
+        assert!(!output.contains("comment2"));
+        assert!(output.contains("{\"a\":1}"));
+    }
+
+    #[test]
+    fn test_string_with_escaped_backslash_then_quote() {
+        // "a\\" — escaped backslash followed by closing quote
+        let input = r#"{"k": "a\\"}"#;
+        let output = strip_comments(input);
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn test_comment_between_keys() {
+        let input = "{\"a\":1,/* between */\"b\":2}";
+        let output = strip_comments(input);
+        assert!(!output.contains("between"));
+        assert!(output.contains("\"a\""));
+        assert!(output.contains("\"b\""));
+    }
+
+    // parse_json5 edge cases
+    #[test]
+    fn test_parse_json5_empty_object() {
+        let input = "{ /* nothing */ }";
+        let result = parse_json5(input);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_json5_array_with_comments() {
+        let input = "[\n  1, // first\n  2, // second\n  3\n]";
+        let result = parse_json5(input);
+        assert!(result.is_ok());
+        let node = result.unwrap();
+        assert_eq!(node.len(), Some(3));
+    }
+
+    #[test]
+    fn test_parse_json5_nested_with_comments() {
+        let input = r#"{
+            "outer": {
+                // inner comment
+                "inner": true
+            }
+        }"#;
+        let result = parse_json5(input);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_parse_json5_all_types() {
+        let input = r#"{
+            "s": "hello", // string
+            "n": 42,      /* number */
+            "f": 3.14,
+            "b": true,
+            "nil": null,
+            "arr": [1,2,3]
+        }"#;
+        let result = parse_json5(input);
+        assert!(result.is_ok());
+        let node = result.unwrap();
+        assert_eq!(node["s"].as_str(), Some("hello"));
+        assert_eq!(node["n"].as_i64(), Some(42));
+        assert!(node["b"].is_boolean());
+        assert!(node["nil"].is_null());
+    }
+
+    #[test]
+    fn test_parse_json5_invalid_json_after_strip() {
+        // Malformed JSON even after stripping comments
+        let result = parse_json5("{ // comment\n bad }");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_json5_boolean_with_comments() {
+        assert!(matches!(parse_json5("/* comment */ true"), Ok(n) if n.is_boolean()));
+        assert!(matches!(parse_json5("false // comment"), Ok(n) if n.is_boolean()));
+    }
+
+    #[test]
+    fn test_parse_json5_null_with_comment() {
+        let result = parse_json5("/* before */ null");
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_null());
+    }
+
+    #[test]
+    fn test_parse_json5_url_in_value() {
+        let input = r#"{"url": "https://example.com"}"#;
+        let result = parse_json5(input);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap()["url"].as_str(), Some("https://example.com"));
+    }
 }

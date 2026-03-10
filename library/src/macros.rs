@@ -100,11 +100,11 @@ macro_rules! __json_vec_push {
     ($vec:expr, $elem:expr) => {
         $vec.push($crate::json!($elem))
     };
-    
+
     ($vec:expr, $elem:expr,) => {
         $crate::__json_vec_push!($vec, $elem)
     };
-    
+
     ($vec:expr, $elem:expr, $($rest:tt)*) => {
         $crate::__json_vec_push!($vec, $elem);
         $crate::__json_vec_push!($vec, $($rest)*);
@@ -134,11 +134,11 @@ macro_rules! __json_map_insert {
     ($map:expr, $key:tt : $value:tt) => {
         $map.insert($key.into(), $crate::json!($value));
     };
-    
+
     ($map:expr, $key:tt : $value:tt,) => {
         $crate::__json_map_insert!($map, $key : $value)
     };
-    
+
     ($map:expr, $key:tt : $value:tt, $($rest:tt)*) => {
         $crate::__json_map_insert!($map, $key : $value);
         $crate::__json_map_insert!($map, $($rest)*);
@@ -188,7 +188,7 @@ mod tests {
     fn test_json_number() {
         let int = json!(42);
         assert_eq!(int.as_i64(), Some(42));
-        
+
         let float = json!(3.14);
         assert_eq!(float.as_f64(), Some(3.14));
     }
@@ -242,7 +242,7 @@ mod tests {
             },
             "active": true
         });
-        
+
         assert_eq!(data["user"]["name"].as_str(), Some("Bob"));
         assert_eq!(data["user"]["scores"][1].as_i64(), Some(92));
         assert_eq!(data["active"].as_bool(), Some(true));
@@ -252,12 +252,12 @@ mod tests {
     fn test_json_with_variables() {
         let name = "Charlie";
         let age = 25;
-        
+
         let obj = json!({
             "name": name,
             "age": age
         });
-        
+
         assert_eq!(obj["name"].as_str(), Some("Charlie"));
         assert_eq!(obj["age"].as_i64(), Some(25));
     }
@@ -272,7 +272,7 @@ mod tests {
             [1, 2],
             json!({"key": "value"})
         ]);
-        
+
         assert_eq!(arr.len(), Some(6));
         assert_eq!(arr[0].as_str(), Some("string"));
         assert_eq!(arr[1].as_i64(), Some(42));
@@ -280,5 +280,242 @@ mod tests {
         assert!(arr[3].is_null());
         assert!(arr[4].is_array());
         assert!(arr[5].is_object());
+    }
+
+    // null
+    #[test]
+    fn test_json_null_is_none_variant() {
+        assert_eq!(json!(null), Node::None);
+    }
+
+    // booleans
+    #[test]
+    fn test_json_true_is_boolean_true() {
+        assert_eq!(json!(true), Node::Boolean(true));
+    }
+
+    #[test]
+    fn test_json_false_is_boolean_false() {
+        assert_eq!(json!(false), Node::Boolean(false));
+    }
+
+    // integers
+    #[test]
+    fn test_json_integer_zero() {
+        assert_eq!(json!(0).as_i64(), Some(0));
+    }
+
+    #[test]
+    fn test_json_integer_negative() {
+        assert_eq!(json!(-99).as_i64(), Some(-99));
+    }
+
+    #[test]
+    fn test_json_integer_large_positive() {
+        assert_eq!(json!(1_000_000).as_i64(), Some(1_000_000));
+    }
+
+    // floats
+    #[test]
+    fn test_json_float_zero() {
+        assert_eq!(json!(0.0).as_f64(), Some(0.0));
+    }
+
+    #[test]
+    fn test_json_float_negative() {
+        assert!(json!(-1.5).as_f64().unwrap() < 0.0);
+    }
+
+    // strings
+    #[test]
+    fn test_json_empty_string() {
+        assert_eq!(json!("").as_str(), Some(""));
+    }
+
+    #[test]
+    fn test_json_string_with_spaces() {
+        assert_eq!(json!("hello world").as_str(), Some("hello world"));
+    }
+
+    #[test]
+    fn test_json_string_with_special_chars() {
+        assert_eq!(json!("a\nb").as_str(), Some("a\nb"));
+    }
+
+    // arrays — structure
+    #[test]
+    fn test_json_single_element_array() {
+        let arr = json!([42]);
+        assert_eq!(arr.len(), Some(1));
+        assert_eq!(arr[0].as_i64(), Some(42));
+    }
+
+    #[test]
+    fn test_json_array_of_booleans() {
+        let arr = json!([true, false, true]);
+        assert_eq!(arr.len(), Some(3));
+        assert_eq!(arr[0].as_bool(), Some(true));
+        assert_eq!(arr[1].as_bool(), Some(false));
+        assert_eq!(arr[2].as_bool(), Some(true));
+    }
+
+    #[test]
+    fn test_json_array_of_strings() {
+        let arr = json!(["a", "b", "c"]);
+        assert_eq!(arr[0].as_str(), Some("a"));
+        assert_eq!(arr[1].as_str(), Some("b"));
+        assert_eq!(arr[2].as_str(), Some("c"));
+    }
+
+    #[test]
+    fn test_json_array_of_nulls() {
+        let arr = json!([json!(null), json!(null)]);
+        assert_eq!(arr.len(), Some(2));
+        assert!(arr[0].is_null());
+        assert!(arr[1].is_null());
+    }
+
+    #[test]
+    fn test_json_array_trailing_comma() {
+        // Trailing comma should compile and produce same result
+        let arr = json!([1, 2, 3,]);
+        assert_eq!(arr.len(), Some(3));
+    }
+
+    #[test]
+    fn test_json_nested_array() {
+        let arr = json!([[1, 2], [3, 4]]);
+        assert!(arr[0].is_array());
+        assert_eq!(arr[0][0].as_i64(), Some(1));
+        assert_eq!(arr[1][1].as_i64(), Some(4));
+    }
+
+    #[test]
+    fn test_json_array_with_null_element() {
+        let arr = json!([1, json!(null), 3]);
+        assert_eq!(arr[1].is_null(), true);
+    }
+
+    // objects — structure
+    #[test]
+    fn test_json_object_single_key() {
+        let obj = json!({"x": 1});
+        assert_eq!(obj["x"].as_i64(), Some(1));
+    }
+
+    #[test]
+    fn test_json_object_bool_values() {
+        let obj = json!({"a": true, "b": false});
+        assert_eq!(obj["a"].as_bool(), Some(true));
+        assert_eq!(obj["b"].as_bool(), Some(false));
+    }
+
+    #[test]
+    fn test_json_object_null_value() {
+        let obj = json!({"nothing": null});
+        assert!(obj["nothing"].is_null());
+    }
+
+    #[test]
+    fn test_json_object_string_value() {
+        let obj = json!({"greeting": "hello"});
+        assert_eq!(obj["greeting"].as_str(), Some("hello"));
+    }
+
+    #[test]
+    fn test_json_object_float_value() {
+        let obj = json!({"pi": 3.14});
+        let v = obj["pi"].as_f64().unwrap();
+        assert!((v - 3.14).abs() < 1e-9);
+    }
+
+    #[test]
+    fn test_json_object_trailing_comma() {
+        let obj = json!({"k": "v",});
+        assert_eq!(obj["k"].as_str(), Some("v"));
+    }
+
+    #[test]
+    fn test_json_object_array_value() {
+        let obj = json!({"items": [1, 2, 3]});
+        assert!(obj["items"].is_array());
+        assert_eq!(obj["items"].len(), Some(3));
+    }
+
+    #[test]
+    fn test_json_object_nested_object() {
+        let obj = json!({"inner": {"val": 99}});
+        assert_eq!(obj["inner"]["val"].as_i64(), Some(99));
+    }
+
+    // variable interpolation
+    #[test]
+    fn test_json_variable_string() {
+        let s = "interpolated";
+        let obj = json!({"key": s});
+        assert_eq!(obj["key"].as_str(), Some("interpolated"));
+    }
+
+    #[test]
+    fn test_json_variable_integer() {
+        let n: i32 = 77;
+        let obj = json!({"n": n});
+        assert_eq!(obj["n"].as_i64(), Some(77));
+    }
+
+    #[test]
+    fn test_json_variable_bool() {
+        let flag = false;
+        let obj = json!({"flag": flag});
+        assert_eq!(obj["flag"].as_bool(), Some(false));
+    }
+
+    #[test]
+    fn test_json_variable_in_array() {
+        let x = 10;
+        let arr = json!([x, x, x]);
+        assert_eq!(arr[0].as_i64(), Some(10));
+        assert_eq!(arr[2].as_i64(), Some(10));
+    }
+
+    // deep nesting
+    #[test]
+    fn test_json_three_levels_deep() {
+        let data = json!({"a": {"b": {"c": 42}}});
+        assert_eq!(data["a"]["b"]["c"].as_i64(), Some(42));
+    }
+
+    #[test]
+    fn test_json_array_in_object_in_array() {
+        let arr = json!([json!({"vals": [true, false]})]);
+        assert_eq!(arr[0]["vals"][0].as_bool(), Some(true));
+        assert_eq!(arr[0]["vals"][1].as_bool(), Some(false));
+    }
+
+    // macro produces correct Node variants
+    #[test]
+    fn test_json_produces_array_variant() {
+        assert!(matches!(json!([]), Node::Array(_)));
+    }
+
+    #[test]
+    fn test_json_produces_object_variant() {
+        assert!(matches!(json!({}), Node::Object(_)));
+    }
+
+    #[test]
+    fn test_json_produces_str_variant() {
+        assert!(matches!(json!("x"), Node::Str(_)));
+    }
+
+    #[test]
+    fn test_json_produces_boolean_variants() {
+        assert!(matches!(json!(true), Node::Boolean(true)));
+        assert!(matches!(json!(false), Node::Boolean(false)));
+    }
+
+    #[test]
+    fn test_json_produces_none_variant() {
+        assert!(matches!(json!(null), Node::None));
     }
 }

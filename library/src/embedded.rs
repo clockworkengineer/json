@@ -469,4 +469,420 @@ mod tests {
         let arr_size = memory::estimate_node_size(&arr);
         assert!(arr_size > memory::node_size());
     }
+
+    // ObjectBuilder — individual add_* methods
+    #[test]
+    fn test_object_builder_empty() {
+        let obj = ObjectBuilder::new().build();
+        if let Node::Object(map) = obj {
+            assert_eq!(map.len(), 0);
+        } else {
+            panic!("Expected object");
+        }
+    }
+
+    #[test]
+    fn test_object_builder_default() {
+        let obj = ObjectBuilder::default().build();
+        assert!(matches!(obj, Node::Object(_)));
+    }
+
+    #[test]
+    fn test_object_builder_add_i64() {
+        let obj = ObjectBuilder::new().add_i64("big", i64::MAX).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(
+                map.get("big"),
+                Some(&Node::Number(Numeric::Integer(i64::MAX)))
+            );
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_u32() {
+        let obj = ObjectBuilder::new().add_u32("u", u32::MAX).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(map.get("u"), Some(&Node::Number(Numeric::UInt32(u32::MAX))));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_u64() {
+        let obj = ObjectBuilder::new().add_u64("u64", u64::MAX).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(
+                map.get("u64"),
+                Some(&Node::Number(Numeric::UInteger(u64::MAX)))
+            );
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_f64() {
+        let obj = ObjectBuilder::new().add_f64("pi", 3.14).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(map.get("pi"), Some(&Node::Number(Numeric::Float(3.14))));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_null() {
+        let obj = ObjectBuilder::new().add_null("nothing").build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(map.get("nothing"), Some(&Node::None));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_node() {
+        let inner = Node::Boolean(true);
+        let obj = ObjectBuilder::new().add_node("flag", inner).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(map.get("flag"), Some(&Node::Boolean(true)));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_array() {
+        let arr = vec![
+            Node::Number(Numeric::Int32(1)),
+            Node::Number(Numeric::Int32(2)),
+        ];
+        let obj = ObjectBuilder::new().add_array("nums", arr).build();
+        if let Node::Object(map) = &obj {
+            assert!(matches!(map.get("nums"), Some(Node::Array(_))));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_add_object() {
+        let mut inner = HashMap::new();
+        inner.insert("x".to_string(), Node::Boolean(false));
+        let obj = ObjectBuilder::new().add_object("sub", inner).build();
+        if let Node::Object(map) = &obj {
+            assert!(matches!(map.get("sub"), Some(Node::Object(_))));
+        }
+    }
+
+    #[cfg(feature = "std")]
+    #[test]
+    fn test_object_builder_with_capacity() {
+        let obj = ObjectBuilder::with_capacity(4).add_str("k", "v").build();
+        if let Node::Object(map) = obj {
+            assert_eq!(map.len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_object_builder_bool_false() {
+        let obj = ObjectBuilder::new().add_bool("off", false).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(map.get("off"), Some(&Node::Boolean(false)));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_bool_true() {
+        let obj = ObjectBuilder::new().add_bool("on", true).build();
+        if let Node::Object(map) = &obj {
+            assert_eq!(map.get("on"), Some(&Node::Boolean(true)));
+        }
+    }
+
+    #[test]
+    fn test_object_builder_overwrite_key() {
+        let obj = ObjectBuilder::new().add_i32("x", 1).add_i32("x", 2).build();
+        if let Node::Object(map) = &obj {
+            // Last insert wins
+            assert_eq!(map.get("x"), Some(&Node::Number(Numeric::Int32(2))));
+        }
+    }
+
+    // ArrayBuilder — individual add_* methods
+    #[test]
+    fn test_array_builder_empty() {
+        let arr = ArrayBuilder::new().build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v.len(), 0);
+        }
+    }
+
+    #[test]
+    fn test_array_builder_default() {
+        let arr = ArrayBuilder::default().build();
+        assert!(matches!(arr, Node::Array(_)));
+    }
+
+    #[test]
+    fn test_array_builder_with_capacity() {
+        let arr = ArrayBuilder::with_capacity(8).add_i32(1).build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v.len(), 1);
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_str() {
+        let arr = ArrayBuilder::new().add_str("hello").build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Str("hello".to_string()));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_i64() {
+        let arr = ArrayBuilder::new().add_i64(i64::MIN).build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Number(Numeric::Integer(i64::MIN)));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_u32() {
+        let arr = ArrayBuilder::new().add_u32(u32::MAX).build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Number(Numeric::UInt32(u32::MAX)));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_u64() {
+        let arr = ArrayBuilder::new().add_u64(u64::MAX).build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Number(Numeric::UInteger(u64::MAX)));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_f64() {
+        let arr = ArrayBuilder::new().add_f64(2.718).build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Number(Numeric::Float(2.718)));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_bool() {
+        let arr = ArrayBuilder::new().add_bool(true).add_bool(false).build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Boolean(true));
+            assert_eq!(v[1], Node::Boolean(false));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_null() {
+        let arr = ArrayBuilder::new().add_null().build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::None);
+        }
+    }
+
+    #[test]
+    fn test_array_builder_add_node() {
+        let arr = ArrayBuilder::new()
+            .add_node(Node::Number(Numeric::Byte(255)))
+            .build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v[0], Node::Number(Numeric::Byte(255)));
+        }
+    }
+
+    #[test]
+    fn test_array_builder_mixed_types() {
+        let arr = ArrayBuilder::new()
+            .add_null()
+            .add_bool(true)
+            .add_i32(-1)
+            .add_str("x")
+            .build();
+        if let Node::Array(v) = arr {
+            assert_eq!(v.len(), 4);
+            assert_eq!(v[0], Node::None);
+            assert_eq!(v[1], Node::Boolean(true));
+            assert_eq!(v[2], Node::Number(Numeric::Int32(-1)));
+            assert_eq!(v[3], Node::Str("x".to_string()));
+        }
+    }
+
+    // sensor module
+    #[test]
+    fn test_sensor_simple_reading_values() {
+        let reading = sensor::simple_reading("dev_01", 42.0, 1000);
+        if let Node::Object(map) = &reading {
+            assert_eq!(map.get("device"), Some(&Node::Str("dev_01".to_string())));
+            assert_eq!(map.get("value"), Some(&Node::Number(Numeric::Float(42.0))));
+            assert_eq!(
+                map.get("timestamp"),
+                Some(&Node::Number(Numeric::Integer(1000)))
+            );
+        } else {
+            panic!("Expected object");
+        }
+    }
+
+    #[test]
+    fn test_sensor_multi_reading() {
+        let values = vec![("temp", 25.0), ("hum", 60.0)];
+        let reading = sensor::multi_reading("dev_02", &values, 2000);
+        if let Node::Object(map) = &reading {
+            assert_eq!(map.get("device"), Some(&Node::Str("dev_02".to_string())));
+            assert_eq!(
+                map.get("timestamp"),
+                Some(&Node::Number(Numeric::Integer(2000)))
+            );
+            assert!(matches!(map.get("readings"), Some(Node::Object(_))));
+            if let Some(Node::Object(r)) = map.get("readings") {
+                assert!(r.contains_key("temp"));
+                assert!(r.contains_key("hum"));
+            }
+        } else {
+            panic!("Expected object");
+        }
+    }
+
+    #[test]
+    fn test_sensor_multi_reading_empty_values() {
+        let reading = sensor::multi_reading("dev_03", &[], 0);
+        if let Node::Object(map) = &reading {
+            assert!(matches!(map.get("readings"), Some(Node::Object(_))));
+        }
+    }
+
+    #[test]
+    fn test_sensor_batch_readings() {
+        let r1 = sensor::simple_reading("s1", 1.0, 100);
+        let r2 = sensor::simple_reading("s2", 2.0, 200);
+        let batch = sensor::batch_readings("gateway", vec![r1, r2]);
+        if let Node::Object(map) = &batch {
+            assert_eq!(map.get("device"), Some(&Node::Str("gateway".to_string())));
+            if let Some(Node::Array(arr)) = map.get("readings") {
+                assert_eq!(arr.len(), 2);
+            } else {
+                panic!("Expected array");
+            }
+        }
+    }
+
+    #[test]
+    fn test_sensor_batch_readings_empty() {
+        let batch = sensor::batch_readings("gw", vec![]);
+        if let Node::Object(map) = &batch {
+            if let Some(Node::Array(arr)) = map.get("readings") {
+                assert_eq!(arr.len(), 0);
+            }
+        }
+    }
+
+    // config module
+    #[test]
+    fn test_config_get_string_missing_key() {
+        let cfg = ObjectBuilder::new().add_str("a", "1").build();
+        assert_eq!(config::get_string(&cfg, "missing"), None);
+    }
+
+    #[test]
+    fn test_config_get_i32_missing_key() {
+        let cfg = ObjectBuilder::new().add_i32("n", 5).build();
+        assert_eq!(config::get_i32(&cfg, "missing"), None);
+    }
+
+    #[test]
+    fn test_config_get_i32_wrong_type() {
+        let cfg = ObjectBuilder::new().add_str("n", "not_a_number").build();
+        assert_eq!(config::get_i32(&cfg, "n"), None);
+    }
+
+    #[test]
+    fn test_config_get_bool_missing_key() {
+        let cfg = ObjectBuilder::new().add_bool("flag", true).build();
+        assert_eq!(config::get_bool(&cfg, "missing"), None);
+    }
+
+    #[test]
+    fn test_config_get_bool_false() {
+        let cfg = ObjectBuilder::new().add_bool("flag", false).build();
+        assert_eq!(config::get_bool(&cfg, "flag"), Some(false));
+    }
+
+    #[test]
+    fn test_config_get_f64() {
+        let cfg = ObjectBuilder::new().add_f64("rate", 9.81).build();
+        assert_eq!(config::get_f64(&cfg, "rate"), Some(9.81));
+    }
+
+    #[test]
+    fn test_config_get_f64_missing_key() {
+        let cfg = ObjectBuilder::new().add_f64("x", 1.0).build();
+        assert_eq!(config::get_f64(&cfg, "missing"), None);
+    }
+
+    #[test]
+    fn test_config_get_f64_wrong_type() {
+        let cfg = ObjectBuilder::new().add_i32("n", 1).build();
+        assert_eq!(config::get_f64(&cfg, "n"), None);
+    }
+
+    #[test]
+    fn test_config_simple_returns_builder() {
+        let cfg = config::simple()
+            .add_str("ssid", "MyNet")
+            .add_bool("dhcp", true)
+            .build();
+        assert_eq!(config::get_string(&cfg, "ssid"), Some("MyNet"));
+        assert_eq!(config::get_bool(&cfg, "dhcp"), Some(true));
+    }
+
+    // memory module
+    #[test]
+    fn test_memory_node_size_nonzero() {
+        assert!(memory::node_size() > 0);
+    }
+
+    #[test]
+    fn test_memory_numeric_size_nonzero() {
+        assert!(memory::numeric_size() > 0);
+    }
+
+    #[test]
+    fn test_memory_null_size_equals_node_size() {
+        assert_eq!(memory::estimate_node_size(&Node::None), memory::node_size());
+    }
+
+    #[test]
+    fn test_memory_boolean_size_equals_node_size() {
+        assert_eq!(
+            memory::estimate_node_size(&Node::Boolean(true)),
+            memory::node_size()
+        );
+    }
+
+    #[test]
+    fn test_memory_number_size_equals_node_size() {
+        assert_eq!(
+            memory::estimate_node_size(&Node::Number(Numeric::Integer(0))),
+            memory::node_size()
+        );
+    }
+
+    #[test]
+    fn test_memory_string_larger_than_node_size() {
+        let s = Node::Str("hello".to_string());
+        assert!(memory::estimate_node_size(&s) >= memory::node_size());
+    }
+
+    #[test]
+    fn test_memory_empty_array_size() {
+        let arr = Node::Array(vec![]);
+        let size = memory::estimate_node_size(&arr);
+        assert!(size >= memory::node_size());
+    }
+
+    #[test]
+    fn test_memory_object_larger_than_node() {
+        let mut map = HashMap::new();
+        map.insert("k".to_string(), Node::None);
+        let obj = Node::Object(map);
+        assert!(memory::estimate_node_size(&obj) > memory::node_size());
+    }
 }

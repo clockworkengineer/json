@@ -219,4 +219,237 @@ mod tests {
         let mut outer_map = HashMap::new();
         outer_map.insert("inner".to_string(), Node::Object(inner_map));
     }
+
+    // String encoding: length prefix
+    #[test]
+    fn test_stringify_string_length_prefix() {
+        // Length is the byte count, not char count
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("hello".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "5:hello");
+    }
+
+    #[test]
+    fn test_stringify_long_string() {
+        let s = "x".repeat(100);
+        let mut dest = Buffer::new();
+        stringify(&Node::Str(s.clone()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("100:{}", s));
+    }
+
+    #[test]
+    fn test_stringify_string_with_spaces() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("hello world".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "11:hello world");
+    }
+
+    // Integer edge cases
+    #[test]
+    fn test_stringify_integer_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Integer(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i0e");
+    }
+
+    #[test]
+    fn test_stringify_integer_max() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Integer(i64::MAX)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("i{}e", i64::MAX));
+    }
+
+    #[test]
+    fn test_stringify_integer_min() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Integer(i64::MIN)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("i{}e", i64::MIN));
+    }
+
+    #[test]
+    fn test_stringify_uinteger_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::UInteger(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i0e");
+    }
+
+    #[test]
+    fn test_stringify_float_rounds_half_up() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Float(2.5)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i3e"); // 2.5 rounds to 3
+    }
+
+    #[test]
+    fn test_stringify_float_negative() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Float(-1.9)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i-2e");
+    }
+
+    #[test]
+    fn test_stringify_byte_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Byte(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i0e");
+    }
+
+    #[test]
+    fn test_stringify_int32_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Int32(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i0e");
+    }
+
+    #[test]
+    fn test_stringify_int32_positive() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Int32(1234)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "i1234e");
+    }
+
+    #[test]
+    fn test_stringify_uint32_large() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::UInt32(u32::MAX)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("i{}e", u32::MAX));
+    }
+
+    // Array cases
+    #[test]
+    fn test_stringify_array_of_booleans() {
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![Node::Boolean(true), Node::Boolean(false)]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "li1ei0ee");
+    }
+
+    #[test]
+    fn test_stringify_array_of_strings() {
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![
+                Node::Str("ab".to_string()),
+                Node::Str("cde".to_string()),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "l2:ab3:cdee");
+    }
+
+    #[test]
+    fn test_stringify_array_nested() {
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![Node::Array(vec![Node::Number(Numeric::Integer(1))])]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "lli1eee");
+    }
+
+    #[test]
+    fn test_stringify_array_mixed_types() {
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![
+                Node::Number(Numeric::Integer(99)),
+                Node::Str("hi".to_string()),
+                Node::Boolean(false),
+                Node::None,
+            ]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "li99e2:hii0ee");
+    }
+
+    // Object key sorting
+    #[test]
+    fn test_stringify_object_keys_sorted_lexicographically() {
+        let mut map = HashMap::new();
+        map.insert("z".to_string(), Node::Number(Numeric::Integer(1)));
+        map.insert("a".to_string(), Node::Number(Numeric::Integer(2)));
+        map.insert("m".to_string(), Node::Number(Numeric::Integer(3)));
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "d1:ai2e1:mi3e1:zi1ee");
+    }
+
+    #[test]
+    fn test_stringify_object_single_entry() {
+        let mut map = HashMap::new();
+        map.insert("key".to_string(), Node::Str("val".to_string()));
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "d3:key3:vale");
+    }
+
+    #[test]
+    fn test_stringify_object_integer_values() {
+        let mut map = HashMap::new();
+        map.insert("x".to_string(), Node::Number(Numeric::Integer(42)));
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "d1:xi42ee");
+    }
+
+    #[test]
+    fn test_stringify_object_with_array_value() {
+        let mut map = HashMap::new();
+        map.insert(
+            "items".to_string(),
+            Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Number(Numeric::Integer(2)),
+            ]),
+        );
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "d5:itemsli1ei2eee");
+    }
+
+    // Deeply nested structure
+    #[test]
+    fn test_stringify_deeply_nested() {
+        // {"a": {"b": {"c": 1}}}
+        let mut inner = HashMap::new();
+        inner.insert("c".to_string(), Node::Number(Numeric::Integer(1)));
+        let mut mid = HashMap::new();
+        mid.insert("b".to_string(), Node::Object(inner));
+        let mut outer = HashMap::new();
+        outer.insert("a".to_string(), Node::Object(mid));
+        let mut dest = Buffer::new();
+        stringify(&Node::Object(outer), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "d1:ad1:bd1:ci1eeee");
+    }
+
+    // None inside containers
+    #[test]
+    fn test_stringify_none_in_array() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Array(vec![Node::None, Node::None]), &mut dest).unwrap();
+        // Node::None writes nothing, so two Nones inside an array produce just "le"
+        assert_eq!(dest.to_string(), "le");
+    }
+
+    #[test]
+    fn test_stringify_result_is_ok_for_all_types() {
+        let nodes = vec![
+            Node::None,
+            Node::Boolean(true),
+            Node::Number(Numeric::Integer(1)),
+            Node::Str("s".to_string()),
+            Node::Array(vec![]),
+            Node::Object(HashMap::new()),
+        ];
+        for node in &nodes {
+            let mut dest = Buffer::new();
+            assert!(stringify(node, &mut dest).is_ok());
+        }
+    }
 }

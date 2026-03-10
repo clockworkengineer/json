@@ -413,4 +413,323 @@ mod tests {
             }
         }
     }
+
+    // Primitive value validation
+    #[test]
+    fn test_validate_true() {
+        let mut source = Buffer::new(b"true");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_false() {
+        let mut source = Buffer::new(b"false");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_null() {
+        let mut source = Buffer::new(b"null");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_string() {
+        let mut source = Buffer::new(b"\"hello world\"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_empty_string() {
+        let mut source = Buffer::new(b"\"\"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_empty_object() {
+        let mut source = Buffer::new(b"{}");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_empty_array() {
+        let mut source = Buffer::new(b"[]");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    // String escape sequences
+    #[test]
+    fn test_validate_string_escape_sequences() {
+        for escaped in [
+            br#""\"""# as &[u8],
+            br#""\\""#,
+            br#""\/""#,
+            b"\"\\b\"",
+            b"\"\\f\"",
+            b"\"\\n\"",
+            b"\"\\r\"",
+            b"\"\\t\"",
+        ] {
+            let mut source = Buffer::new(escaped);
+            assert!(
+                validate_json(&mut source, &ParserConfig::new()).is_ok(),
+                "Expected escape {:?} to be valid",
+                escaped
+            );
+        }
+    }
+
+    #[test]
+    fn test_validate_unicode_escape() {
+        let mut source = Buffer::new(b"\"\\u0041\"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_invalid_unicode_escape_short() {
+        let mut source = Buffer::new(b"\"\\u00\"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_unicode_escape_non_hex() {
+        let mut source = Buffer::new(b"\"\\u00zz\"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_escape_char() {
+        let mut source = Buffer::new(b"\"\\x\"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_unterminated_string() {
+        let mut source = Buffer::new(b"\"unterminated");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    // Number edge cases
+    #[test]
+    fn test_validate_zero() {
+        let mut source = Buffer::new(b"0");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_negative_float() {
+        let mut source = Buffer::new(b"-3.14");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_exponent_uppercase() {
+        let mut source = Buffer::new(b"1E5");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_exponent_with_plus() {
+        let mut source = Buffer::new(b"1.5e+3");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_minus_only_invalid() {
+        let mut source = Buffer::new(b"-");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_decimal_no_trailing_digit_invalid() {
+        let mut source = Buffer::new(b"1.");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_exponent_no_digit_invalid() {
+        let mut source = Buffer::new(b"1e");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    // Object structure errors
+    #[test]
+    fn test_validate_trailing_comma_object() {
+        let mut source = Buffer::new(b"{\"a\":1,}");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_missing_colon() {
+        let mut source = Buffer::new(b"{\"k\" 1}");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_non_string_key() {
+        let mut source = Buffer::new(b"{1: \"val\"}");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_missing_object_close() {
+        let mut source = Buffer::new(b"{\"k\":1");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    // Array structure errors
+    #[test]
+    fn test_validate_trailing_comma_array() {
+        let mut source = Buffer::new(b"[1,2,]");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_missing_array_close() {
+        let mut source = Buffer::new(b"[1,2,3");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_empty_input() {
+        let mut source = Buffer::new(b"");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_unexpected_char() {
+        let mut source = Buffer::new(b"@");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    // Whitespace handling
+    #[test]
+    fn test_validate_whitespace_around_value() {
+        let mut source = Buffer::new(b"  \t\n  42  ");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_whitespace_in_object() {
+        let mut source = Buffer::new(b"{ \"key\" : \"value\" }");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_whitespace_in_array() {
+        let mut source = Buffer::new(b"[ 1 , 2 , 3 ]");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    // Config limit tests
+    #[test]
+    fn test_validate_depth_exactly_at_limit() {
+        // depth 2: outer object (depth 1), inner value parsed at depth 1 incremented
+        let json = b"{\"a\":{\"b\":1}}";
+        let mut source = Buffer::new(json);
+        let config = ParserConfig::new().with_max_depth(Some(2));
+        assert!(validate_json(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_depth_exceeded_error_message() {
+        let json = b"[[[[1]]]]";
+        let mut source = Buffer::new(json);
+        let config = ParserConfig::new().with_max_depth(Some(2));
+        let err = validate_json(&mut source, &config).unwrap_err();
+        assert!(err.contains("depth"));
+    }
+
+    #[test]
+    fn test_validate_string_length_exceeded() {
+        let mut source = Buffer::new(b"\"toolong\"");
+        let config = ParserConfig::new().with_max_string_length(Some(4));
+        let err = validate_json(&mut source, &config).unwrap_err();
+        assert!(err.contains("string length"));
+    }
+
+    #[test]
+    fn test_validate_string_length_at_limit() {
+        // Limit of 4: "abcd" has 4 chars — check passes before reading closing quote
+        let mut source = Buffer::new(b"\"abc\"");
+        let config = ParserConfig::new().with_max_string_length(Some(4));
+        assert!(validate_json(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_array_size_exceeded() {
+        let mut source = Buffer::new(b"[1,2,3,4]");
+        let config = ParserConfig::new().with_max_array_size(Some(3));
+        let err = validate_json(&mut source, &config).unwrap_err();
+        assert!(err.contains("array size"));
+    }
+
+    #[test]
+    fn test_validate_array_size_at_limit() {
+        let mut source = Buffer::new(b"[1,2,3]");
+        let config = ParserConfig::new().with_max_array_size(Some(3));
+        assert!(validate_json(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_object_size_exceeded() {
+        let mut source = Buffer::new(b"{\"a\":1,\"b\":2,\"c\":3}");
+        let config = ParserConfig::new().with_max_object_size(Some(2));
+        let err = validate_json(&mut source, &config).unwrap_err();
+        assert!(err.contains("object size"));
+    }
+
+    #[test]
+    fn test_validate_object_size_at_limit() {
+        let mut source = Buffer::new(b"{\"a\":1,\"b\":2}");
+        let config = ParserConfig::new().with_max_object_size(Some(2));
+        assert!(validate_json(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_validate_unlimited_config_deep_nesting() {
+        let json = b"[[[[[[[[[[1]]]]]]]]]]";
+        let mut source = Buffer::new(json);
+        assert!(validate_json(&mut source, &ParserConfig::unlimited()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_strict_config_rejects_deep() {
+        let json = b"[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]";
+        let mut source = Buffer::new(json);
+        assert!(validate_json(&mut source, &ParserConfig::strict()).is_err());
+    }
+
+    // Complex / mixed structures
+    #[test]
+    fn test_validate_nested_arrays_and_objects() {
+        let json = br#"{"items":[{"id":1},{"id":2}],"count":2}"#;
+        let mut source = Buffer::new(json);
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_all_types_in_array() {
+        let json = b"[true, false, null, 42, 3.14, \"str\", {}, []]";
+        let mut source = Buffer::new(json);
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_ok());
+    }
+
+    #[test]
+    fn test_validate_invalid_true_typo() {
+        let mut source = Buffer::new(b"treu");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_false_typo() {
+        let mut source = Buffer::new(b"flase");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
+
+    #[test]
+    fn test_validate_invalid_null_typo() {
+        let mut source = Buffer::new(b"nul");
+        assert!(validate_json(&mut source, &ParserConfig::new()).is_err());
+    }
 }

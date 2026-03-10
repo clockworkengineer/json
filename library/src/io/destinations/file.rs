@@ -1,6 +1,6 @@
-use std::fs::File as StdFile;
-use std::io::{Write, Read, Seek};
 use crate::io::traits::IDestination;
+use std::fs::File as StdFile;
+use std::io::{Read, Seek, Write};
 
 /// A file-based destination for writing JSON data to disk.
 /// Implements file operations for storing and manipulating encoded data.
@@ -41,7 +41,6 @@ impl File {
     pub fn close(&self) -> std::io::Result<()> {
         Ok(())
     }
-
 }
 
 impl IDestination for File {
@@ -233,6 +232,208 @@ mod tests {
         fs::remove_file(path)?;
         Ok(())
     }
-    
-}
 
+    #[test]
+    fn new_file_has_zero_length() -> std::io::Result<()> {
+        let path = "test_new_zero_len.txt";
+        let file = File::new(path)?;
+        assert_eq!(file.file_length(), 0);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn add_byte_increments_file_length_by_one() -> std::io::Result<()> {
+        let path = "test_add_byte_len.txt";
+        let mut file = File::new(path)?;
+        file.add_byte(b'X');
+        assert_eq!(file.file_length(), 1);
+        file.add_byte(b'Y');
+        assert_eq!(file.file_length(), 2);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn add_bytes_increments_file_length_by_string_len() -> std::io::Result<()> {
+        let path = "test_add_bytes_len.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("hello");
+        assert_eq!(file.file_length(), 5);
+        file.add_bytes(" world");
+        assert_eq!(file.file_length(), 11);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn add_byte_then_add_bytes_accumulates_correctly() -> std::io::Result<()> {
+        let path = "test_mixed_writes.txt";
+        let mut file = File::new(path)?;
+        file.add_byte(b'[');
+        file.add_bytes("1,2,3");
+        file.add_byte(b']');
+
+        let mut content = String::new();
+        StdFile::open(path)?.read_to_string(&mut content)?;
+        assert_eq!(content, "[1,2,3]");
+        assert_eq!(file.file_length(), 7);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn add_bytes_empty_string_does_not_change_length() -> std::io::Result<()> {
+        let path = "test_empty_write.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("abc");
+        file.add_bytes("");
+        assert_eq!(file.file_length(), 3);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn add_bytes_unicode_writes_correct_bytes() -> std::io::Result<()> {
+        let path = "test_unicode.txt";
+        let mut file = File::new(path)?;
+        let text = "日本語"; // 3 chars × 3 bytes each = 9 bytes
+        file.add_bytes(text);
+        assert_eq!(file.file_length(), 9);
+
+        let mut content = String::new();
+        StdFile::open(path)?.read_to_string(&mut content)?;
+        assert_eq!(content, text);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn clear_resets_file_length_to_zero() -> std::io::Result<()> {
+        let path = "test_clear_len.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("some data");
+        assert_eq!(file.file_length(), 9);
+        file.clear();
+        assert_eq!(file.file_length(), 0);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn clear_then_write_starts_fresh() -> std::io::Result<()> {
+        let path = "test_clear_rewrite.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("old content");
+        file.clear();
+        file.add_bytes("new");
+
+        let mut content = String::new();
+        StdFile::open(path)?.read_to_string(&mut content)?;
+        assert_eq!(content, "new");
+        assert_eq!(file.file_length(), 3);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn clear_multiple_times_stays_empty() -> std::io::Result<()> {
+        let path = "test_clear_multi.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("data");
+        file.clear();
+        file.clear();
+        assert_eq!(file.file_length(), 0);
+        assert_eq!(file.last(), None);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn last_after_add_bytes_returns_final_byte() -> std::io::Result<()> {
+        let path = "test_last_bytes.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("hello");
+        assert_eq!(file.last(), Some(b'o'));
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn last_after_add_byte_returns_that_byte() -> std::io::Result<()> {
+        let path = "test_last_single.txt";
+        let mut file = File::new(path)?;
+        file.add_byte(b'Z');
+        assert_eq!(file.last(), Some(b'Z'));
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn last_updates_after_each_write() -> std::io::Result<()> {
+        let path = "test_last_update.txt";
+        let mut file = File::new(path)?;
+        file.add_bytes("abc");
+        assert_eq!(file.last(), Some(b'c'));
+        file.add_byte(b'!');
+        assert_eq!(file.last(), Some(b'!'));
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn write_json_object_and_read_back() -> std::io::Result<()> {
+        let path = "test_json_object.txt";
+        let mut file = File::new(path)?;
+        let json = "{\"key\": \"value\", \"num\": 42}";
+        file.add_bytes(json);
+
+        let mut content = String::new();
+        StdFile::open(path)?.read_to_string(&mut content)?;
+        assert_eq!(content, json);
+        assert_eq!(file.file_length(), json.len());
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn write_json_array_and_read_back() -> std::io::Result<()> {
+        let path = "test_json_array.txt";
+        let mut file = File::new(path)?;
+        let json = "[true, false, null, 1, \"two\"]";
+        file.add_bytes(json);
+
+        let mut content = String::new();
+        StdFile::open(path)?.read_to_string(&mut content)?;
+        assert_eq!(content, json);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn new_creates_or_truncates_existing_file() -> std::io::Result<()> {
+        let path = "test_truncate.txt";
+        // Write something via a first instance
+        {
+            let mut f = File::new(path)?;
+            f.add_bytes("original content that is quite long");
+        }
+        // Create again – should truncate
+        let file = File::new(path)?;
+        assert_eq!(file.file_length(), 0);
+        let mut content = String::new();
+        StdFile::open(path)?.read_to_string(&mut content)?;
+        assert_eq!(content, "");
+        fs::remove_file(path)?;
+        Ok(())
+    }
+
+    #[test]
+    fn file_name_returns_exact_path_given() -> std::io::Result<()> {
+        let path = "test_file_name_check.txt";
+        let file = File::new(path)?;
+        assert_eq!(file.file_name(), path);
+        fs::remove_file(path)?;
+        Ok(())
+    }
+}

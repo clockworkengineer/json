@@ -73,14 +73,14 @@ mod tests {
     use super::*;
     use std::fs;
     use std::io::Write;
+    use std::sync::atomic::{AtomicU32, Ordering};
+
+    static COUNTER: AtomicU32 = AtomicU32::new(0);
 
     fn create_test_file(content: &str) -> String {
-        #[cfg(feature = "rand")]
-        let random_num = rand::random::<u32>();
-        #[cfg(not(feature = "rand"))]
-        let random_num = std::process::id();
-
-        let path = format!("test_{}.txt", random_num);
+        let id = COUNTER.fetch_add(1, Ordering::SeqCst);
+        let pid = std::process::id();
+        let path = format!("test_file_src_{pid}_{id}.txt");
         let mut file = fs::File::create(&path).unwrap();
         file.write_all(content.as_bytes()).unwrap();
         path
@@ -173,6 +173,183 @@ mod tests {
             source.next();
         }
         assert_eq!(content, test_content);
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn more_returns_true_when_file_has_content() {
+        let path = create_test_file("abc");
+        let mut source = File::new(&path).unwrap();
+        assert!(source.more());
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn more_returns_false_after_exhausting_file() {
+        let path = create_test_file("x");
+        let mut source = File::new(&path).unwrap();
+        source.next();
+        assert!(!source.more());
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn next_past_end_does_not_panic() {
+        let path = create_test_file("a");
+        let mut source = File::new(&path).unwrap();
+        source.next(); // past the only byte
+        source.next(); // past end again – must not panic
+        assert_eq!(source.current(), None);
+        assert!(!source.more());
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn single_char_file_reads_then_exhausts() {
+        let path = create_test_file("Z");
+        let mut source = File::new(&path).unwrap();
+        assert!(source.more());
+        assert_eq!(source.current(), Some('Z'));
+        source.next();
+        assert!(!source.more());
+        assert_eq!(source.current(), None);
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn reset_after_partial_read_restarts_from_beginning() {
+        let path = create_test_file("hello");
+        let mut source = File::new(&path).unwrap();
+        source.next();
+        source.next();
+        source.reset();
+        assert_eq!(source.current(), Some('h'));
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn reset_multiple_times_always_returns_to_start() {
+        let path = create_test_file("xyz");
+        let mut source = File::new(&path).unwrap();
+        source.next();
+        source.reset();
+        assert_eq!(source.current(), Some('x'));
+        source.next();
+        source.next();
+        source.reset();
+        assert_eq!(source.current(), Some('x'));
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn can_read_every_char_in_sequence() {
+        let path = create_test_file("json");
+        let mut source = File::new(&path).unwrap();
+        let expected = ['j', 's', 'o', 'n'];
+        for &ch in &expected {
+            assert_eq!(source.current(), Some(ch));
+            source.next();
+        }
+        assert_eq!(source.current(), None);
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn whitespace_characters_are_read_correctly() {
+        let path = create_test_file(" \t\n");
+        let mut source = File::new(&path).unwrap();
+        assert_eq!(source.current(), Some(' '));
+        source.next();
+        assert_eq!(source.current(), Some('\t'));
+        source.next();
+        assert_eq!(source.current(), Some('\n'));
+        source.next();
+        assert_eq!(source.current(), None);
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn file_with_only_whitespace_is_readable() {
+        let path = create_test_file("   ");
+        let mut source = File::new(&path).unwrap();
+        assert!(source.more());
+        assert_eq!(source.current(), Some(' '));
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn json_object_content_reads_correctly() {
+        let json = r#"{"key":"val"}"#;
+        let path = create_test_file(json);
+        let mut source = File::new(&path).unwrap();
+        let mut result = String::new();
+        while source.more() {
+            result.push(source.current().unwrap());
+            source.next();
+        }
+        assert_eq!(result, json);
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn json_array_content_reads_correctly() {
+        let json = "[1,true,null]";
+        let path = create_test_file(json);
+        let mut source = File::new(&path).unwrap();
+        let mut result = String::new();
+        while source.more() {
+            result.push(source.current().unwrap());
+            source.next();
+        }
+        assert_eq!(result, json);
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn ascii_digit_sequence_reads_in_order() {
+        let path = create_test_file("0123456789");
+        let mut source = File::new(&path).unwrap();
+        for digit in '0'..='9' {
+            assert_eq!(source.current(), Some(digit));
+            source.next();
+        }
+        assert!(!source.more());
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn current_is_stable_without_calling_next() {
+        let path = create_test_file("abc");
+        let mut source = File::new(&path).unwrap();
+        // Calling current() repeatedly without next() should return the same char
+        assert_eq!(source.current(), Some('a'));
+        assert_eq!(source.current(), Some('a'));
+        cleanup_file(&path);
+    }
+
+    #[test]
+    fn read_after_reset_gives_full_content_again() {
+        let content = "hi";
+        let path = create_test_file(content);
+        let mut source = File::new(&path).unwrap();
+
+        // First pass
+        let mut first = String::new();
+        while source.more() {
+            first.push(source.current().unwrap());
+            source.next();
+        }
+
+        // Second pass after reset
+        source.reset();
+        let mut second = String::new();
+        while source.more() {
+            second.push(source.current().unwrap());
+            source.next();
+        }
+
+        assert_eq!(first, content);
+        assert_eq!(second, content);
         cleanup_file(&path);
     }
 }

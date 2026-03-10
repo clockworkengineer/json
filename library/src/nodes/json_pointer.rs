@@ -426,4 +426,289 @@ mod tests {
         let node = create_test_node();
         assert!(get(&node, "invalid").is_none());
     }
+
+    // ─── get: edge cases ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_get_empty_pointer_returns_root() {
+        let node = Node::Boolean(true);
+        assert_eq!(get(&node, ""), Some(&Node::Boolean(true)));
+    }
+
+    #[test]
+    fn test_get_slash_only_returns_root() {
+        let node = Node::Number(Numeric::Integer(99));
+        assert_eq!(get(&node, "/"), Some(&Node::Number(Numeric::Integer(99))));
+    }
+
+    #[test]
+    fn test_get_through_non_container_returns_none() {
+        let node = Node::Boolean(true);
+        assert!(get(&node, "/anything").is_none());
+    }
+
+    #[test]
+    fn test_get_array_first_element() {
+        let node = Node::Array(vec![
+            Node::Str("first".to_string()),
+            Node::Str("second".to_string()),
+        ]);
+        assert_eq!(get(&node, "/0"), Some(&Node::Str("first".to_string())));
+    }
+
+    #[test]
+    fn test_get_array_last_element() {
+        let node = Node::Array(vec![
+            Node::Number(Numeric::Integer(10)),
+            Node::Number(Numeric::Integer(20)),
+            Node::Number(Numeric::Integer(30)),
+        ]);
+        assert_eq!(get(&node, "/2"), Some(&Node::Number(Numeric::Integer(30))));
+    }
+
+    #[test]
+    fn test_get_array_out_of_bounds_returns_none() {
+        let node = Node::Array(vec![Node::Boolean(true)]);
+        assert!(get(&node, "/5").is_none());
+    }
+
+    #[test]
+    fn test_get_null_value() {
+        let mut map = HashMap::new();
+        map.insert("key".to_string(), Node::None);
+        let node = Node::Object(map);
+        assert_eq!(get(&node, "/key"), Some(&Node::None));
+    }
+
+    #[test]
+    fn test_get_boolean_value() {
+        let mut map = HashMap::new();
+        map.insert("flag".to_string(), Node::Boolean(true));
+        let node = Node::Object(map);
+        assert_eq!(get(&node, "/flag"), Some(&Node::Boolean(true)));
+    }
+
+    #[test]
+    fn test_get_deep_nested_object() {
+        let mut level3 = HashMap::new();
+        level3.insert("value".to_string(), Node::Number(Numeric::Integer(42)));
+        let mut level2 = HashMap::new();
+        level2.insert("c".to_string(), Node::Object(level3));
+        let mut level1 = HashMap::new();
+        level1.insert("b".to_string(), Node::Object(level2));
+        let mut root = HashMap::new();
+        root.insert("a".to_string(), Node::Object(level1));
+        let node = Node::Object(root);
+
+        assert_eq!(
+            get(&node, "/a/b/c/value"),
+            Some(&Node::Number(Numeric::Integer(42)))
+        );
+    }
+
+    #[test]
+    fn test_get_array_element_is_object() {
+        let mut item = HashMap::new();
+        item.insert("id".to_string(), Node::Number(Numeric::Integer(1)));
+        let node = Node::Array(vec![Node::Object(item)]);
+
+        assert_eq!(
+            get(&node, "/0/id"),
+            Some(&Node::Number(Numeric::Integer(1)))
+        );
+    }
+
+    #[test]
+    fn test_get_nested_array_in_object() {
+        let node = create_test_node();
+        // /foo is an array; /foo/1 is the inner object with a "baz" key
+        let result = get(&node, "/foo/1/baz");
+        assert_eq!(result, Some(&Node::Number(Numeric::Integer(42))));
+    }
+
+    #[test]
+    fn test_get_tilde_escape_slash_in_key() {
+        let mut map = HashMap::new();
+        map.insert("a/b".to_string(), Node::Number(Numeric::Integer(1)));
+        let node = Node::Object(map);
+        assert_eq!(
+            get(&node, "/a~1b"),
+            Some(&Node::Number(Numeric::Integer(1)))
+        );
+    }
+
+    #[test]
+    fn test_get_tilde_escape_tilde_in_key() {
+        let mut map = HashMap::new();
+        map.insert("m~n".to_string(), Node::Number(Numeric::Integer(8)));
+        let node = Node::Object(map);
+        assert_eq!(
+            get(&node, "/m~0n"),
+            Some(&Node::Number(Numeric::Integer(8)))
+        );
+    }
+
+    #[test]
+    fn test_get_without_leading_slash_returns_none() {
+        let mut map = HashMap::new();
+        map.insert("key".to_string(), Node::Boolean(true));
+        let node = Node::Object(map);
+        assert!(get(&node, "key").is_none());
+    }
+
+    // ─── get_mut ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_get_mut_empty_pointer_returns_root() {
+        let mut node = Node::Boolean(false);
+        let result = get_mut(&mut node, "");
+        assert!(result.is_some());
+        *result.unwrap() = Node::Boolean(true);
+        assert_eq!(node, Node::Boolean(true));
+    }
+
+    #[test]
+    fn test_get_mut_nonexistent_returns_none() {
+        let mut node = Node::Object(HashMap::new());
+        assert!(get_mut(&mut node, "/missing").is_none());
+    }
+
+    #[test]
+    fn test_get_mut_modifies_array_element() {
+        let mut node = Node::Array(vec![
+            Node::Number(Numeric::Integer(1)),
+            Node::Number(Numeric::Integer(2)),
+        ]);
+        if let Some(v) = get_mut(&mut node, "/1") {
+            *v = Node::Number(Numeric::Integer(99));
+        }
+        assert_eq!(get(&node, "/1"), Some(&Node::Number(Numeric::Integer(99))));
+    }
+
+    #[test]
+    fn test_get_mut_without_leading_slash_returns_none() {
+        let mut node = Node::Object(HashMap::new());
+        assert!(get_mut(&mut node, "no_slash").is_none());
+    }
+
+    // ─── set ─────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_set_empty_pointer_replaces_root() {
+        let mut node = Node::Boolean(false);
+        set(&mut node, "", Node::Boolean(true)).unwrap();
+        assert_eq!(node, Node::Boolean(true));
+    }
+
+    #[test]
+    fn test_set_overwrites_existing_key() {
+        let mut node = Node::Object(HashMap::new());
+        set(&mut node, "/x", Node::Number(Numeric::Integer(1))).unwrap();
+        set(&mut node, "/x", Node::Number(Numeric::Integer(2))).unwrap();
+        assert_eq!(get(&node, "/x"), Some(&Node::Number(Numeric::Integer(2))));
+    }
+
+    #[test]
+    fn test_set_array_index() {
+        let mut node = Node::Array(vec![
+            Node::Number(Numeric::Integer(0)),
+            Node::Number(Numeric::Integer(0)),
+        ]);
+        set(&mut node, "/1", Node::Number(Numeric::Integer(42))).unwrap();
+        assert_eq!(get(&node, "/1"), Some(&Node::Number(Numeric::Integer(42))));
+    }
+
+    #[test]
+    fn test_set_null_value() {
+        let mut node = Node::Object(HashMap::new());
+        set(&mut node, "/nothing", Node::None).unwrap();
+        assert_eq!(get(&node, "/nothing"), Some(&Node::None));
+    }
+
+    #[test]
+    fn test_set_boolean_value() {
+        let mut node = Node::Object(HashMap::new());
+        set(&mut node, "/flag", Node::Boolean(true)).unwrap();
+        assert_eq!(get(&node, "/flag"), Some(&Node::Boolean(true)));
+    }
+
+    #[test]
+    fn test_set_without_leading_slash_errors() {
+        let mut node = Node::Object(HashMap::new());
+        assert!(set(&mut node, "noslash", Node::Boolean(true)).is_err());
+    }
+
+    // ─── remove ───────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_remove_root_pointer_errors() {
+        let mut node = Node::Object(HashMap::new());
+        assert!(remove(&mut node, "").is_err());
+        assert!(remove(&mut node, "/").is_err());
+    }
+
+    #[test]
+    fn test_remove_without_leading_slash_errors() {
+        let mut node = Node::Object(HashMap::new());
+        assert!(remove(&mut node, "noslash").is_err());
+    }
+
+    #[test]
+    fn test_remove_nonexistent_key_returns_none() {
+        let mut node = Node::Object(HashMap::new());
+        let result = remove(&mut node, "/missing").unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_remove_out_of_bounds_index_returns_none() {
+        let mut node = Node::Array(vec![Node::Boolean(true)]);
+        let result = remove(&mut node, "/99").unwrap();
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_remove_preserves_remaining_object_keys() {
+        let mut map = HashMap::new();
+        map.insert("a".to_string(), Node::Number(Numeric::Integer(1)));
+        map.insert("b".to_string(), Node::Number(Numeric::Integer(2)));
+        let mut node = Node::Object(map);
+
+        remove(&mut node, "/a").unwrap();
+        assert!(get(&node, "/a").is_none());
+        assert_eq!(get(&node, "/b"), Some(&Node::Number(Numeric::Integer(2))));
+    }
+
+    #[test]
+    fn test_remove_first_array_element_shifts_indices() {
+        let mut node = Node::Array(vec![
+            Node::Number(Numeric::Integer(10)),
+            Node::Number(Numeric::Integer(20)),
+            Node::Number(Numeric::Integer(30)),
+        ]);
+        let removed = remove(&mut node, "/0").unwrap();
+        assert_eq!(removed, Some(Node::Number(Numeric::Integer(10))));
+        // After removal, index 0 is now 20
+        assert_eq!(get(&node, "/0"), Some(&Node::Number(Numeric::Integer(20))));
+        assert_eq!(get(&node, "/1"), Some(&Node::Number(Numeric::Integer(30))));
+    }
+
+    // ─── parse_pointer (via get behaviour) ───────────────────────────────────
+
+    #[test]
+    fn test_parse_pointer_single_segment() {
+        let mut map = HashMap::new();
+        map.insert("hello".to_string(), Node::Boolean(true));
+        let node = Node::Object(map);
+        assert_eq!(get(&node, "/hello"), Some(&Node::Boolean(true)));
+    }
+
+    #[test]
+    fn test_parse_pointer_numeric_key_in_object() {
+        // Objects can have numeric string keys – should not be treated as array index
+        let mut map = HashMap::new();
+        map.insert("0".to_string(), Node::Str("zero".to_string()));
+        let node = Node::Object(map);
+        assert_eq!(get(&node, "/0"), Some(&Node::Str("zero".to_string())));
+    }
 }

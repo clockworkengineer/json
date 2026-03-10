@@ -273,4 +273,280 @@ mod tests {
         stringify(&Node::Str("\u{0000}\u{001F}".to_string()), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "\"\\u0000\\u001f\"");
     }
+
+    // Boolean
+    #[test]
+    fn test_stringify_boolean_false() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Boolean(false), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "false");
+    }
+
+    // Numbers — all variants and edge cases
+    #[test]
+    fn test_stringify_integer_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Integer(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "0");
+    }
+
+    #[test]
+    fn test_stringify_integer_max() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Integer(i64::MAX)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), i64::MAX.to_string());
+    }
+
+    #[test]
+    fn test_stringify_integer_min() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Integer(i64::MIN)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), i64::MIN.to_string());
+    }
+
+    #[test]
+    fn test_stringify_uinteger_max() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::UInteger(u64::MAX)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), u64::MAX.to_string());
+    }
+
+    #[test]
+    fn test_stringify_float_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Float(0.0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "0.0");
+    }
+
+    #[test]
+    fn test_stringify_float_negative() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Float(-3.14)), &mut dest).unwrap();
+        let s = dest.to_string();
+        assert!(s.starts_with("-3.14"), "got: {}", s);
+    }
+
+    #[test]
+    fn test_stringify_byte_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Byte(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "0");
+    }
+
+    #[test]
+    fn test_stringify_byte_max() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Byte(255)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "255");
+    }
+
+    #[test]
+    fn test_stringify_int32_max() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::Int32(i32::MAX)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), i32::MAX.to_string());
+    }
+
+    #[test]
+    fn test_stringify_uint32_zero() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Number(Numeric::UInt32(0)), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "0");
+    }
+
+    // String escape sequences
+    #[test]
+    fn test_stringify_empty_string() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "\"\"");
+    }
+
+    #[test]
+    fn test_stringify_string_backslash() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("a\\b".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "\"a\\\\b\"");
+    }
+
+    #[test]
+    fn test_stringify_string_tab() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("a\tb".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "\"a\\tb\"");
+    }
+
+    #[test]
+    fn test_stringify_string_carriage_return() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("a\rb".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "\"a\\rb\"");
+    }
+
+    #[test]
+    fn test_stringify_string_newline() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("line1\nline2".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "\"line1\\nline2\"");
+    }
+
+    #[test]
+    fn test_stringify_string_all_escapes() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("\"\\\n\r\t".to_string()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "\"\\\"\\\\\\n\\r\\t\"");
+    }
+
+    #[test]
+    fn test_stringify_string_no_escaping_needed() {
+        let mut dest = Buffer::new();
+        let s = "Hello, World! 12345 !@#$%^&*()".to_string();
+        stringify(&Node::Str(s.clone()), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("\"{}\"", s));
+    }
+
+    #[test]
+    fn test_stringify_string_unicode_control_low() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Str("\u{0008}".to_string()), &mut dest).unwrap(); // backspace
+        assert_eq!(dest.to_string(), "\"\\u0008\"");
+    }
+
+    #[test]
+    fn test_stringify_string_key_with_escape() {
+        let mut dest = Buffer::new();
+        let mut map = HashMap::new();
+        map.insert("ke\ny".to_string(), Node::Boolean(true));
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "{\"ke\\ny\":true}");
+    }
+
+    // Array edge cases
+    #[test]
+    fn test_stringify_array_single_element() {
+        let mut dest = Buffer::new();
+        stringify(&Node::Array(vec![Node::Boolean(true)]), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "[true]");
+    }
+
+    #[test]
+    fn test_stringify_array_nested_empty() {
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![Node::Array(vec![]), Node::Array(vec![])]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "[[],[]]");
+    }
+
+    #[test]
+    fn test_stringify_array_of_nulls() {
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![Node::None, Node::None, Node::None]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "[null,null,null]");
+    }
+
+    #[test]
+    fn test_stringify_array_commas_correct() {
+        // Verify no leading/trailing comma
+        let mut dest = Buffer::new();
+        stringify(
+            &Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Number(Numeric::Integer(2)),
+                Node::Number(Numeric::Integer(3)),
+            ]),
+            &mut dest,
+        )
+        .unwrap();
+        assert_eq!(dest.to_string(), "[1,2,3]");
+    }
+
+    // Object edge cases
+    #[test]
+    fn test_stringify_object_multiple_values() {
+        // Single key to avoid HashMap ordering
+        let mut dest = Buffer::new();
+        let mut map = HashMap::new();
+        map.insert("n".to_string(), Node::None);
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "{\"n\":null}");
+    }
+
+    #[test]
+    fn test_stringify_object_empty_key() {
+        let mut dest = Buffer::new();
+        let mut map = HashMap::new();
+        map.insert("".to_string(), Node::Number(Numeric::Integer(1)));
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "{\"\":1}");
+    }
+
+    #[test]
+    fn test_stringify_object_nested_array() {
+        let mut dest = Buffer::new();
+        let mut map = HashMap::new();
+        map.insert(
+            "arr".to_string(),
+            Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Number(Numeric::Integer(2)),
+            ]),
+        );
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "{\"arr\":[1,2]}");
+    }
+
+    // Return value
+    #[test]
+    fn test_stringify_returns_ok_all_types() {
+        let nodes = vec![
+            Node::None,
+            Node::Boolean(true),
+            Node::Boolean(false),
+            Node::Number(Numeric::Integer(1)),
+            Node::Number(Numeric::Float(1.0)),
+            Node::Str("".to_string()),
+            Node::Array(vec![]),
+            Node::Object(HashMap::new()),
+        ];
+        for node in &nodes {
+            let mut dest = Buffer::new();
+            assert!(stringify(node, &mut dest).is_ok());
+        }
+    }
+
+    // Roundtrip: parse then stringify
+    #[test]
+    fn test_stringify_roundtrip_object() {
+        use crate::parser::default::from_str;
+        let original = r#"{"a":1,"b":"hello","c":true,"d":null}"#;
+        let node = from_str(original).unwrap();
+        let mut dest = Buffer::new();
+        stringify(&node, &mut dest).unwrap();
+        // Re-parse the stringified output to verify it's valid JSON
+        let reparsed = from_str(&dest.to_string());
+        assert!(reparsed.is_ok());
+        let reparsed = reparsed.unwrap();
+        assert_eq!(reparsed["a"].as_i64(), Some(1));
+        assert_eq!(reparsed["b"].as_str(), Some("hello"));
+        assert!(reparsed["c"].is_boolean());
+        assert!(reparsed["d"].is_null());
+    }
+
+    #[test]
+    fn test_stringify_roundtrip_array() {
+        use crate::parser::default::from_str;
+        let original = "[1,2,3,\"four\",true,null]";
+        let node = from_str(original).unwrap();
+        let mut dest = Buffer::new();
+        stringify(&node, &mut dest).unwrap();
+        let reparsed = from_str(&dest.to_string()).unwrap();
+        assert_eq!(reparsed.len(), Some(6));
+    }
 }

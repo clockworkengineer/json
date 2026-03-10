@@ -8,3 +8,9 @@ mod file_integration_tests;
 
 #[cfg(feature = "file-io")]
 mod parser_integration_tests;
+
+#[cfg(feature = "file-io")]
+mod round_trip_integration_tests;
+
+#[cfg(feature = "file-io")]
+mod validate_integration_tests;

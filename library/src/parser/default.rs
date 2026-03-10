@@ -334,13 +334,21 @@ fn parse_string_with_config(
 
     while let Some(c) = source.current() {
         // Check string length limit
-        let cur_len = if let Some(ref v) = heap_buf { v.len() } else { buf.len() };
+        let cur_len = if let Some(ref v) = heap_buf {
+            v.len()
+        } else {
+            buf.len()
+        };
         if let Some(max_len) = config.max_string_length {
             if cur_len >= max_len {
                 use arrayvec::ArrayString;
                 use core::fmt::Write;
                 let mut msg: ArrayString<64> = ArrayString::new();
-                let _ = write!(&mut msg, "Maximum string length of {} bytes exceeded", max_len);
+                let _ = write!(
+                    &mut msg,
+                    "Maximum string length of {} bytes exceeded",
+                    max_len
+                );
                 return Err(msg.to_string());
             }
         }
@@ -352,20 +360,23 @@ fn parse_string_with_config(
                 if let Some(v) = heap_buf {
                     return Ok(Node::Str(unsafe { String::from_utf8_unchecked(v) }));
                 } else {
-                    return Ok(Node::Str(unsafe { String::from_utf8_unchecked(buf.into_iter().collect()) }));
+                    return Ok(Node::Str(unsafe {
+                        String::from_utf8_unchecked(buf.into_iter().collect())
+                    }));
                 }
             }
             BACKSLASH => {
                 source.next();
-                let push_byte = |b: u8, buf: &mut ArrayVec<u8, 64>, heap_buf: &mut Option<Vec<u8>>| {
-                    if let Some(v) = heap_buf {
-                        v.push(b);
-                    } else if buf.try_push(b).is_err() {
-                        let mut v = buf.clone().into_iter().collect::<Vec<u8>>();
-                        v.push(b);
-                        *heap_buf = Some(v);
-                    }
-                };
+                let push_byte =
+                    |b: u8, buf: &mut ArrayVec<u8, 64>, heap_buf: &mut Option<Vec<u8>>| {
+                        if let Some(v) = heap_buf {
+                            v.push(b);
+                        } else if buf.try_push(b).is_err() {
+                            let mut v = buf.clone().into_iter().collect::<Vec<u8>>();
+                            v.push(b);
+                            *heap_buf = Some(v);
+                        }
+                    };
                 match source.current() {
                     Some('"') => push_byte(b'"', &mut buf, &mut heap_buf),
                     Some('\\') => push_byte(b'\\', &mut buf, &mut heap_buf),
@@ -397,7 +408,8 @@ fn parse_string_with_config(
                                         if let Some(ref mut v) = heap_buf {
                                             v.push(*b);
                                         } else if buf.try_push(*b).is_err() {
-                                            let mut v = buf.clone().into_iter().collect::<Vec<u8>>();
+                                            let mut v =
+                                                buf.clone().into_iter().collect::<Vec<u8>>();
                                             v.push(*b);
                                             heap_buf = Some(v);
                                         }
@@ -839,5 +851,339 @@ mod tests {
         let mut source = Buffer::new(b"[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]");
         let result = parse_with_config(&mut source, &config);
         assert!(result.is_ok());
+    }
+
+    // from_str tests
+    #[test]
+    fn test_from_str_null() {
+        assert!(matches!(from_str("null"), Ok(Node::None)));
+    }
+
+    #[test]
+    fn test_from_str_boolean() {
+        assert!(matches!(from_str("true"), Ok(Node::Boolean(true))));
+        assert!(matches!(from_str("false"), Ok(Node::Boolean(false))));
+    }
+
+    #[test]
+    fn test_from_str_integer() {
+        assert!(matches!(
+            from_str("42"),
+            Ok(Node::Number(Numeric::Integer(42)))
+        ));
+    }
+
+    #[test]
+    fn test_from_str_negative_float() {
+        let result = from_str("-3.14").unwrap();
+        match result {
+            Node::Number(Numeric::Float(n)) => assert!((n - (-3.14)).abs() < f64::EPSILON),
+            _ => panic!("Expected float"),
+        }
+    }
+
+    #[test]
+    fn test_from_str_string() {
+        assert!(matches!(from_str("\"hello\""), Ok(Node::Str(s)) if s == "hello"));
+    }
+
+    #[test]
+    fn test_from_str_array() {
+        let node = from_str("[1,2,3]").unwrap();
+        match node {
+            Node::Array(arr) => assert_eq!(arr.len(), 3),
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_from_str_object() {
+        let node = from_str("{\"x\":1}").unwrap();
+        match node {
+            Node::Object(obj) => assert!(obj.contains_key("x")),
+            _ => panic!("Expected object"),
+        }
+    }
+
+    #[test]
+    fn test_from_str_error() {
+        assert!(from_str("").is_err());
+        assert!(from_str("{bad}").is_err());
+    }
+
+    // from_bytes tests
+    #[test]
+    fn test_from_bytes_null() {
+        assert!(matches!(from_bytes(b"null"), Ok(Node::None)));
+    }
+
+    #[test]
+    fn test_from_bytes_boolean() {
+        assert!(matches!(from_bytes(b"true"), Ok(Node::Boolean(true))));
+        assert!(matches!(from_bytes(b"false"), Ok(Node::Boolean(false))));
+    }
+
+    #[test]
+    fn test_from_bytes_integer() {
+        assert!(matches!(
+            from_bytes(b"0"),
+            Ok(Node::Number(Numeric::Integer(0)))
+        ));
+    }
+
+    #[test]
+    fn test_from_bytes_string() {
+        assert!(matches!(from_bytes(b"\"world\""), Ok(Node::Str(s)) if s == "world"));
+    }
+
+    #[test]
+    fn test_from_bytes_array() {
+        let node = from_bytes(b"[true,false,null]").unwrap();
+        match node {
+            Node::Array(arr) => assert_eq!(arr.len(), 3),
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_from_bytes_object() {
+        let node = from_bytes(b"{\"k\":\"v\"}").unwrap();
+        match node {
+            Node::Object(obj) => {
+                assert_eq!(obj.len(), 1);
+                assert!(matches!(obj.get("k"), Some(Node::Str(s)) if s == "v"));
+            }
+            _ => panic!("Expected object"),
+        }
+    }
+
+    #[test]
+    fn test_from_bytes_error() {
+        assert!(from_bytes(b"").is_err());
+        assert!(from_bytes(b"[1,2,").is_err());
+    }
+
+    // Number edge cases
+    #[test]
+    fn test_parse_zero() {
+        let mut source = Buffer::new(b"0");
+        assert!(matches!(
+            parse(&mut source),
+            Ok(Node::Number(Numeric::Integer(0)))
+        ));
+    }
+
+    #[test]
+    fn test_parse_large_integer() {
+        let mut source = Buffer::new(b"9007199254740991");
+        assert!(matches!(
+            parse(&mut source),
+            Ok(Node::Number(Numeric::Integer(9007199254740991)))
+        ));
+    }
+
+    #[test]
+    fn test_parse_scientific_no_decimal() {
+        let mut source = Buffer::new(b"5e2");
+        match parse(&mut source) {
+            Ok(Node::Number(Numeric::Float(n))) => assert!((n - 500.0).abs() < f64::EPSILON),
+            _ => panic!("Expected float"),
+        }
+    }
+
+    #[test]
+    fn test_parse_float_zero() {
+        let mut source = Buffer::new(b"0.0");
+        match parse(&mut source) {
+            Ok(Node::Number(Numeric::Float(n))) => assert!(n == 0.0),
+            _ => panic!("Expected float"),
+        }
+    }
+
+    // Object and array content tests
+    #[test]
+    fn test_array_mixed_types() {
+        let node = from_bytes(b"[1,\"two\",true,null,3.14]").unwrap();
+        match node {
+            Node::Array(arr) => {
+                assert_eq!(arr.len(), 5);
+                assert!(matches!(arr[0], Node::Number(Numeric::Integer(1))));
+                assert!(matches!(&arr[1], Node::Str(s) if s == "two"));
+                assert!(matches!(arr[2], Node::Boolean(true)));
+                assert!(matches!(arr[3], Node::None));
+                match arr[4] {
+                    Node::Number(Numeric::Float(n)) => assert!((n - 3.14).abs() < 1e-10),
+                    _ => panic!("Expected float"),
+                }
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_object_multiple_keys() {
+        let node = from_str(r#"{"a":1,"b":"two","c":true,"d":null}"#).unwrap();
+        match node {
+            Node::Object(obj) => {
+                assert_eq!(obj.len(), 4);
+                assert!(matches!(
+                    obj.get("a"),
+                    Some(Node::Number(Numeric::Integer(1)))
+                ));
+                assert!(matches!(obj.get("b"), Some(Node::Str(s)) if s == "two"));
+                assert!(matches!(obj.get("c"), Some(Node::Boolean(true))));
+                assert!(matches!(obj.get("d"), Some(Node::None)));
+            }
+            _ => panic!("Expected object"),
+        }
+    }
+
+    #[test]
+    fn test_object_with_whitespace() {
+        let node = from_str("{ \"key\" : \"value\" }").unwrap();
+        match node {
+            Node::Object(obj) => {
+                assert_eq!(obj.len(), 1);
+                assert!(matches!(obj.get("key"), Some(Node::Str(s)) if s == "value"));
+            }
+            _ => panic!("Expected object"),
+        }
+    }
+
+    #[test]
+    fn test_array_with_whitespace() {
+        let node = from_str("[ 1 , 2 , 3 ]").unwrap();
+        match node {
+            Node::Array(arr) => assert_eq!(arr.len(), 3),
+            _ => panic!("Expected array"),
+        }
+    }
+
+    // Error message tests
+    #[test]
+    fn test_empty_input_error() {
+        let mut source = Buffer::new(b"");
+        let err = parse(&mut source).unwrap_err();
+        assert!(!err.is_empty());
+    }
+
+    #[test]
+    fn test_missing_colon_error() {
+        let mut source = Buffer::new(b"{\"key\" \"value\"}");
+        assert!(parse(&mut source).is_err());
+    }
+
+    #[test]
+    fn test_missing_object_end_error() {
+        let mut source = Buffer::new(b"{\"k\":1");
+        assert!(parse(&mut source).is_err());
+    }
+
+    #[test]
+    fn test_missing_array_end_error() {
+        let mut source = Buffer::new(b"[1,2,3");
+        assert!(parse(&mut source).is_err());
+    }
+
+    #[test]
+    fn test_unexpected_char_error() {
+        let mut source = Buffer::new(b"@");
+        assert!(parse(&mut source).is_err());
+    }
+
+    // Boundary condition tests for config limits
+    #[test]
+    fn test_depth_exactly_at_limit() {
+        // depth limit of 3: top-level (depth 0) → object (depth 1) → value (depth 1 incremented to 2)
+        // nesting {"a":{"b":1}} means parsing outer object at depth 0, inner at depth 1, value at depth 2
+        let config = ParserConfig::new().with_max_depth(Some(3));
+        let mut source = Buffer::new(b"{\"a\":{\"b\":1}}");
+        assert!(parse_with_config(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_array_size_exactly_at_limit() {
+        let config = ParserConfig::new().with_max_array_size(Some(3));
+        let mut source = Buffer::new(b"[1,2,3]");
+        assert!(parse_with_config(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_array_size_one_over_limit() {
+        let config = ParserConfig::new().with_max_array_size(Some(3));
+        let mut source = Buffer::new(b"[1,2,3,4]");
+        let err = parse_with_config(&mut source, &config).unwrap_err();
+        assert!(err.contains("array size"));
+    }
+
+    #[test]
+    fn test_object_size_exactly_at_limit() {
+        let config = ParserConfig::new().with_max_object_size(Some(2));
+        let mut source = Buffer::new(b"{\"a\":1,\"b\":2}");
+        assert!(parse_with_config(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_string_length_within_limit() {
+        // Limit is checked before the closing quote, so a 4-char string with limit 5 succeeds
+        let config = ParserConfig::new().with_max_string_length(Some(5));
+        let mut source = Buffer::new(b"\"abcd\"");
+        assert!(parse_with_config(&mut source, &config).is_ok());
+    }
+
+    #[test]
+    fn test_string_length_one_over_limit() {
+        let config = ParserConfig::new().with_max_string_length(Some(5));
+        let mut source = Buffer::new(b"\"toolong\"");
+        let err = parse_with_config(&mut source, &config).unwrap_err();
+        assert!(err.contains("string length"));
+    }
+
+    // UTF-8 string content via Unicode escapes
+    #[test]
+    fn test_multibyte_utf8_string() {
+        // Parser uses \uXXXX escapes for non-ASCII; verify CJK characters round-trip correctly
+        let node = from_str("\"\\u4e2d\\u6587\"").unwrap();
+        assert!(matches!(node, Node::Str(s) if s == "中文"));
+    }
+
+    #[test]
+    fn test_unicode_escape_emoji_plane() {
+        // U+0041 = 'A'
+        let mut source = Buffer::new(b"\"\\u0041\"");
+        assert!(matches!(parse(&mut source), Ok(Node::Str(s)) if s == "A"));
+    }
+
+    // Nested structure tests
+    #[test]
+    fn test_nested_array_in_object() {
+        let node = from_str(r#"{"nums":[10,20,30]}"#).unwrap();
+        match node {
+            Node::Object(obj) => match obj.get("nums") {
+                Some(Node::Array(arr)) => assert_eq!(arr.len(), 3),
+                _ => panic!("Expected array value"),
+            },
+            _ => panic!("Expected object"),
+        }
+    }
+
+    #[test]
+    fn test_nested_object_in_array() {
+        let node = from_bytes(b"[{\"x\":1},{\"y\":2}]").unwrap();
+        match node {
+            Node::Array(arr) => {
+                assert_eq!(arr.len(), 2);
+                assert!(matches!(&arr[0], Node::Object(_)));
+                assert!(matches!(&arr[1], Node::Object(_)));
+            }
+            _ => panic!("Expected array"),
+        }
+    }
+
+    #[test]
+    fn test_parse_with_config_no_limits() {
+        let config = ParserConfig::new();
+        let mut source = Buffer::new(b"{\"deep\":[[[1,2,3]]]}");
+        assert!(parse_with_config(&mut source, &config).is_ok());
     }
 }

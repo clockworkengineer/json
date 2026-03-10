@@ -141,4 +141,136 @@ mod tests {
             _ => assert!(false),
         }
     }
+
+    #[test]
+    fn default_creates_empty_buffer() {
+        let mut source = Buffer::default();
+        assert_eq!(source.to_string(), "");
+        assert!(!source.more());
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn current_on_empty_buffer_returns_none() {
+        let mut source = Buffer::new(&[]);
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn more_on_empty_buffer_returns_false() {
+        let mut source = Buffer::new(&[]);
+        assert!(!source.more());
+    }
+
+    #[test]
+    fn next_past_end_does_not_panic() {
+        let mut source = Buffer::new(b"a");
+        source.next(); // move past the only byte
+        source.next(); // past end – should not panic
+        assert!(!source.more());
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn reset_after_partial_read_restarts_from_beginning() {
+        let mut source = Buffer::new(b"hello");
+        source.next();
+        source.next();
+        source.reset();
+        assert_eq!(source.current(), Some('h'));
+    }
+
+    #[test]
+    fn reset_on_empty_buffer_does_not_panic() {
+        let mut source = Buffer::new(&[]);
+        source.reset();
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn can_read_every_character_in_sequence() {
+        let input = b"json";
+        let expected = ['j', 's', 'o', 'n'];
+        let mut source = Buffer::new(input);
+        for &ch in &expected {
+            assert_eq!(source.current(), Some(ch));
+            source.next();
+        }
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn more_is_false_immediately_after_last_character() {
+        let mut source = Buffer::new(b"xy");
+        source.next(); // at 'y'
+        assert!(source.more());
+        source.next(); // past end
+        assert!(!source.more());
+    }
+
+    #[test]
+    fn single_byte_buffer_reads_then_exhausts() {
+        let mut source = Buffer::new(b"Z");
+        assert!(source.more());
+        assert_eq!(source.current(), Some('Z'));
+        source.next();
+        assert!(!source.more());
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn to_string_returns_full_content_regardless_of_position() {
+        let mut source = Buffer::new(b"abcde");
+        source.next();
+        source.next();
+        // to_string should reflect the whole underlying buffer, not the read position
+        assert_eq!(source.to_string(), "abcde");
+    }
+
+    #[test]
+    fn reset_multiple_times_always_returns_to_start() {
+        let mut source = Buffer::new(b"xyz");
+        source.next();
+        source.reset();
+        assert_eq!(source.current(), Some('x'));
+        source.next();
+        source.next();
+        source.reset();
+        assert_eq!(source.current(), Some('x'));
+    }
+
+    #[test]
+    fn buffer_with_whitespace_characters() {
+        let mut source = Buffer::new(b" \t\n");
+        assert_eq!(source.current(), Some(' '));
+        source.next();
+        assert_eq!(source.current(), Some('\t'));
+        source.next();
+        assert_eq!(source.current(), Some('\n'));
+        source.next();
+        assert_eq!(source.current(), None);
+    }
+
+    #[test]
+    fn buffer_with_json_object_string() {
+        let json = br#"{"key":"value"}"#;
+        let mut source = Buffer::new(json);
+        assert_eq!(source.current(), Some('{'));
+        // advance to the end
+        while source.more() {
+            source.next();
+        }
+        assert_eq!(source.current(), None);
+        assert_eq!(source.to_string(), r#"{"key":"value"}"#);
+    }
+
+    #[test]
+    fn buffer_with_ascii_digits() {
+        let mut source = Buffer::new(b"0123456789");
+        for digit in '0'..='9' {
+            assert_eq!(source.current(), Some(digit));
+            source.next();
+        }
+        assert!(!source.more());
+    }
 }

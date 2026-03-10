@@ -735,4 +735,266 @@ mod tests {
         stringify(&Node::Object(dict), &mut dest).unwrap();
         assert_eq!(dest.to_string(), "[[items]]\n[items.nested]\nvalue = 42\n");
     }
+
+    // Root-level type errors
+    #[test]
+    fn test_stringify_root_null_errors() {
+        let mut dest = BufferDestination::new();
+        let result = stringify(&Node::None, &mut dest);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "TOML format requires a Object at the root level"
+        );
+    }
+
+    #[test]
+    fn test_stringify_root_boolean_errors() {
+        let mut dest = BufferDestination::new();
+        let result = stringify(&Node::Boolean(true), &mut dest);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_stringify_root_number_errors() {
+        let mut dest = BufferDestination::new();
+        let result = stringify(&Node::Number(Numeric::Integer(1)), &mut dest);
+        assert!(result.is_err());
+    }
+
+    // Empty root object
+    #[test]
+    fn test_stringify_empty_object_root() {
+        let mut dest = BufferDestination::new();
+        let result = stringify(&Node::Object(HashMap::new()), &mut dest);
+        assert!(result.is_ok());
+        assert_eq!(dest.to_string(), "");
+    }
+
+    // Boolean values inside object
+    #[test]
+    fn test_stringify_bool_true_value() {
+        let mut map = HashMap::new();
+        map.insert("flag".to_string(), Node::Boolean(true));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "flag = true\n");
+    }
+
+    #[test]
+    fn test_stringify_bool_false_value() {
+        let mut map = HashMap::new();
+        map.insert("enabled".to_string(), Node::Boolean(false));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "enabled = false\n");
+    }
+
+    // Null value inside object
+    #[test]
+    fn test_stringify_null_value_in_object() {
+        let mut map = HashMap::new();
+        map.insert("nothing".to_string(), Node::None);
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "nothing = null\n");
+    }
+
+    // Numeric variants
+    #[test]
+    fn test_stringify_integer_negative() {
+        let mut map = HashMap::new();
+        map.insert("n".to_string(), Node::Number(Numeric::Integer(-42)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "n = -42\n");
+    }
+
+    #[test]
+    fn test_stringify_uinteger_large() {
+        let mut map = HashMap::new();
+        map.insert("n".to_string(), Node::Number(Numeric::UInteger(u64::MAX)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("n = {}\n", u64::MAX));
+    }
+
+    #[test]
+    fn test_stringify_float_value() {
+        let mut map = HashMap::new();
+        map.insert("pi".to_string(), Node::Number(Numeric::Float(3.14)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        let s = dest.to_string();
+        assert!(s.starts_with("pi = 3.14"), "got: {}", s);
+    }
+
+    #[test]
+    fn test_stringify_byte_value() {
+        let mut map = HashMap::new();
+        map.insert("b".to_string(), Node::Number(Numeric::Byte(255)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "b = 255\n");
+    }
+
+    #[test]
+    fn test_stringify_int32_value() {
+        let mut map = HashMap::new();
+        map.insert("i".to_string(), Node::Number(Numeric::Int32(i32::MIN)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("i = {}\n", i32::MIN));
+    }
+
+    #[test]
+    fn test_stringify_uint32_value() {
+        let mut map = HashMap::new();
+        map.insert("u".to_string(), Node::Number(Numeric::UInt32(u32::MAX)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), format!("u = {}\n", u32::MAX));
+    }
+
+    // Homogeneous arrays
+    #[test]
+    fn test_stringify_array_of_strings() {
+        let mut map = HashMap::new();
+        map.insert(
+            "tags".to_string(),
+            Node::Array(vec![Node::Str("a".to_string()), Node::Str("b".to_string())]),
+        );
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "tags = [\"a\", \"b\"]\n");
+    }
+
+    #[test]
+    fn test_stringify_array_of_booleans() {
+        let mut map = HashMap::new();
+        map.insert(
+            "flags".to_string(),
+            Node::Array(vec![Node::Boolean(true), Node::Boolean(false)]),
+        );
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "flags = [true, false]\n");
+    }
+
+    #[test]
+    fn test_stringify_array_of_integers() {
+        let mut map = HashMap::new();
+        map.insert(
+            "nums".to_string(),
+            Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Number(Numeric::Integer(2)),
+                Node::Number(Numeric::Integer(3)),
+            ]),
+        );
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "nums = [1, 2, 3]\n");
+    }
+
+    // Mixed array → error
+    #[test]
+    fn test_stringify_mixed_array_returns_error() {
+        let mut map = HashMap::new();
+        map.insert(
+            "mixed".to_string(),
+            Node::Array(vec![
+                Node::Number(Numeric::Integer(1)),
+                Node::Str("oops".to_string()),
+            ]),
+        );
+        let mut dest = BufferDestination::new();
+        let result = stringify(&Node::Object(map), &mut dest);
+        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err(),
+            "TOML arrays must contain elements of the same type"
+        );
+    }
+
+    // Key sort order
+    #[test]
+    fn test_stringify_keys_sorted() {
+        let mut map = HashMap::new();
+        map.insert("z".to_string(), Node::Number(Numeric::Integer(3)));
+        map.insert("a".to_string(), Node::Number(Numeric::Integer(1)));
+        map.insert("m".to_string(), Node::Number(Numeric::Integer(2)));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "a = 1\nm = 2\nz = 3\n");
+    }
+
+    // Multiple root-level scalars of different types
+    #[test]
+    fn test_stringify_multiple_root_scalars() {
+        let mut map = HashMap::new();
+        map.insert("name".to_string(), Node::Str("test".to_string()));
+        map.insert("count".to_string(), Node::Number(Numeric::Integer(5)));
+        map.insert("active".to_string(), Node::Boolean(true));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        // Keys are sorted: active, count, name
+        assert_eq!(
+            dest.to_string(),
+            "active = true\ncount = 5\nname = \"test\"\n"
+        );
+    }
+
+    // Empty string value
+    #[test]
+    fn test_stringify_empty_string_value() {
+        let mut map = HashMap::new();
+        map.insert("k".to_string(), Node::Str("".to_string()));
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "k = \"\"\n");
+    }
+
+    // Single-element arrays
+    #[test]
+    fn test_stringify_single_element_number_array() {
+        let mut map = HashMap::new();
+        map.insert(
+            "ids".to_string(),
+            Node::Array(vec![Node::Number(Numeric::Integer(99))]),
+        );
+        let mut dest = BufferDestination::new();
+        stringify(&Node::Object(map), &mut dest).unwrap();
+        assert_eq!(dest.to_string(), "ids = [99]\n");
+    }
+
+    // calculate_prefix via empty vs non-empty
+    #[test]
+    fn test_calculate_prefix_empty() {
+        let result = calculate_prefix("", &"key".to_string());
+        assert_eq!(result, "key");
+    }
+
+    #[test]
+    fn test_calculate_prefix_nonempty() {
+        let result = calculate_prefix("outer", &"inner".to_string());
+        assert_eq!(result, "outer.inner");
+    }
+
+    #[test]
+    fn test_calculate_prefix_deep() {
+        let result = calculate_prefix("a.b", &"c".to_string());
+        assert_eq!(result, "a.b.c");
+    }
+
+    // get_node_type
+    #[test]
+    fn test_get_node_type_variants() {
+        assert_eq!(get_node_type(&Node::Str("".to_string())), "string");
+        assert_eq!(get_node_type(&Node::Boolean(false)), "boolean");
+        assert_eq!(get_node_type(&Node::Number(Numeric::Integer(0))), "number");
+        assert_eq!(get_node_type(&Node::Array(vec![])), "array");
+        assert_eq!(get_node_type(&Node::Object(HashMap::new())), "object");
+        assert_eq!(get_node_type(&Node::None), "null");
+    }
 }
