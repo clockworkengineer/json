@@ -34,7 +34,7 @@ checksum = "4c3cf4824e2d5f025c7b531afcb2325364084a16806f6d47fbc1f5fbd9960590"
 
 [[package]]
 name = "embedded_test"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
@@ -111,56 +111,56 @@ checksum = "92ecc6618181def0457392ccd0ee51198e065e016d1d527a7ac1b6dc7c1f09d2"
 
 [[package]]
 name = "json_advanced_features"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_api_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_benchmarks"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_create_at_runtime"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_fibonacci"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_index_and_parse_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_iot_sensor"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_lib"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "arrayvec",
  "dtoa",
@@ -171,56 +171,56 @@ dependencies = [
 
 [[package]]
 name = "json_macro_and_nested_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_merge_patch"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_node_builder"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_parser_config"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_perf_and_memory_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_pointer_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_pretty_and_safe_access_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_pretty_print"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
  "json_utility_lib",
@@ -228,21 +228,21 @@ dependencies = [
 
 [[package]]
 name = "json_query_traverse"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_schema_patch_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_strip_whitespace"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
  "json_utility_lib",
@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "json_to_bencode"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
  "json_utility_lib",
@@ -258,7 +258,7 @@ dependencies = [
 
 [[package]]
 name = "json_to_toml"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
  "json_utility_lib",
@@ -266,7 +266,7 @@ dependencies = [
 
 [[package]]
 name = "json_to_xml"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
  "json_utility_lib",
@@ -274,7 +274,7 @@ dependencies = [
 
 [[package]]
 name = "json_to_yaml"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
  "json_utility_lib",
@@ -282,18 +282,18 @@ dependencies = [
 
 [[package]]
 name = "json_unicode_files"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]
 
 [[package]]
 name = "json_utility_lib"
-version = "0.1.7"
+version = "0.2.0"
 
 [[package]]
 name = "json_validation_demo"
-version = "0.1.7"
+version = "0.2.0"
 dependencies = [
  "json_lib",
 ]

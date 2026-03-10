@@ -1,6 +1,6 @@
 [package]
 name = "json_macro_and_nested_demo"
-version = "0.1.7"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
