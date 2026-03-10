@@ -8,6 +8,8 @@
 use crate::io::traits::IDestination;
 use crate::nodes::node::*;
 use crate::stringify::escape::*;
+use dtoa;
+use itoa;
 
 #[cfg(feature = "std")]
 use std::string::String;
@@ -28,17 +30,21 @@ pub fn stringify_optimized(node: &Node, destination: &mut dyn IDestination) -> R
     match node {
         Node::None => destination.add_bytes(JSON_NULL),
         Node::Boolean(value) => destination.add_bytes(if *value { JSON_TRUE } else { JSON_FALSE }),
-        Node::Number(value) => match value {
-            Numeric::Integer(n) => destination.add_bytes(&n.to_string()),
-            Numeric::UInteger(n) => destination.add_bytes(&n.to_string()),
-            Numeric::Float(f) => destination.add_bytes(&f.to_string()),
-            Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
-            Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
-            Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
-            Numeric::Int16(i) => destination.add_bytes(&i.to_string()),
-            Numeric::UInt16(u) => destination.add_bytes(&u.to_string()),
-            Numeric::Int8(i) => destination.add_bytes(&i.to_string()),
-        },
+        Node::Number(value) => {
+            let mut ibuf = itoa::Buffer::new();
+            let mut fbuf = dtoa::Buffer::new();
+            match value {
+                Numeric::Integer(n) => destination.add_bytes(ibuf.format(*n)),
+                Numeric::UInteger(n) => destination.add_bytes(ibuf.format(*n)),
+                Numeric::Float(f) => destination.add_bytes(fbuf.format(*f)),
+                Numeric::Byte(b) => destination.add_bytes(ibuf.format(*b)),
+                Numeric::Int32(i) => destination.add_bytes(ibuf.format(*i)),
+                Numeric::UInt32(u) => destination.add_bytes(ibuf.format(*u)),
+                Numeric::Int16(i) => destination.add_bytes(ibuf.format(*i)),
+                Numeric::UInt16(u) => destination.add_bytes(ibuf.format(*u)),
+                Numeric::Int8(i) => destination.add_bytes(ibuf.format(*i)),
+            }
+        }
         Node::Str(value) => {
             if needs_escaping(value) {
                 write_escaped_string(value, destination);

@@ -16,9 +16,6 @@ use std::string::String;
 #[cfg(not(feature = "std"))]
 use alloc::string::{String, ToString};
 
-// Use smallvec for small arrays to reduce heap allocations
-use smallvec::SmallVec;
-
 /// Serializes a `Node` into JSON and writes it to the given destination.
 ///
 /// # Arguments
@@ -47,14 +44,11 @@ pub fn stringify(node: &Node, destination: &mut dyn IDestination) -> Result<(), 
         Node::Str(value) => write_escaped_string(value, destination),
         Node::Array(items) => {
             destination.add_bytes(STR_ARRAY_START);
-            // Use SmallVec for small arrays to reduce heap allocations
-            let mut temp: SmallVec<[usize; 8]> = SmallVec::new();
-            temp.extend(0..items.len());
-            for (_index, item) in temp.iter().enumerate() {
-                if *item > 0 {
+            for (index, item) in items.iter().enumerate() {
+                if index > 0 {
                     destination.add_bytes(STR_COMMA);
                 }
-                stringify(&items[*item], destination)?;
+                stringify(item, destination)?;
             }
             destination.add_bytes(STR_ARRAY_END);
         }

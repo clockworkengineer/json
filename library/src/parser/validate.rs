@@ -320,9 +320,10 @@ fn validate_null(source: &mut dyn ISource) -> Result<(), String> {
     Ok(())
 }
 
+#[inline]
 fn skip_whitespace(source: &mut dyn ISource) {
     while let Some(c) = source.current() {
-        if c.is_whitespace() {
+        if is_json_whitespace(c) {
             source.next();
         } else {
             break;

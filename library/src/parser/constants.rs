@@ -35,8 +35,17 @@ pub const DECIMAL_POINT: char = '.';
 pub const EXPONENT_LOWER: char = 'e';
 pub const EXPONENT_UPPER: char = 'E';
 
-/// Whitespace characters
-pub const SPACE: char = ' ';
-pub const TAB: char = '\t';
-pub const NEWLINE: char = '\n';
-pub const CARRIAGE_RETURN: char = '\r';
+/// Returns true for the four JSON-specified whitespace characters (RFC 8259 §2).
+///
+/// Prefer this over `char::is_whitespace()` in hot paths — it avoids the
+/// Unicode table lookup and branch overhead for non-ASCII code-points.
+#[inline(always)]
+pub const fn is_json_whitespace(c: char) -> bool {
+    matches!(c, ' ' | '\t' | '\n' | '\r')
+}
+
+/// Returns true when `c` can legally begin a JSON number.
+#[inline(always)]
+pub const fn is_number_start(c: char) -> bool {
+    matches!(c, '-' | '0'..='9')
+}

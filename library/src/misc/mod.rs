@@ -4,9 +4,8 @@
 use crate::Node;
 use crate::io::traits::{IDestination, ISource};
 use crate::nodes::node::Numeric;
-
-#[cfg(not(feature = "std"))]
-use alloc::{format, string::ToString};
+use dtoa;
+use itoa;
 
 /// Returns the current version of the package as specified in Cargo.toml.
 /// Uses CARGO_PKG_VERSION environment variable that is set during compilation
@@ -17,6 +16,21 @@ pub fn get_version() -> &'static str {
 pub fn print(node: &Node, destination: &mut dyn IDestination, indent: usize) {
     pretty_print(node, destination, indent, 0);
 }
+
+/// Writes `n` ASCII space bytes to `destination` without heap allocation.
+#[inline]
+fn write_spaces(destination: &mut dyn IDestination, n: usize) {
+    const SPACES: &str = "                                ";
+    let mut remaining = n;
+    while remaining >= SPACES.len() {
+        destination.add_bytes(SPACES);
+        remaining -= SPACES.len();
+    }
+    if remaining > 0 {
+        destination.add_bytes(&SPACES[..remaining]);
+    }
+}
+
 /// Prints a JSON node to the specified destination with formatting
 ///
 /// # Arguments
@@ -32,43 +46,53 @@ fn pretty_print(
 ) {
     match node {
         // Handle boolean values (true/false)
-        Node::Boolean(value) => destination.add_bytes(&value.to_string()),
+        Node::Boolean(value) => destination.add_bytes(if *value { "true" } else { "false" }),
         // Handle various numeric types
-        Node::Number(value) => match value {
-            Numeric::Integer(i) => destination.add_bytes(&i.to_string()),
-            Numeric::UInteger(u) => destination.add_bytes(&u.to_string()),
-            Numeric::Float(f) => destination.add_bytes(&f.to_string()),
-            Numeric::Byte(b) => destination.add_bytes(&b.to_string()),
-            Numeric::Int8(i) => destination.add_bytes(&i.to_string()),
-            Numeric::Int16(i) => destination.add_bytes(&i.to_string()),
-            Numeric::UInt16(u) => destination.add_bytes(&u.to_string()),
-            Numeric::Int32(i) => destination.add_bytes(&i.to_string()),
-            Numeric::UInt32(u) => destination.add_bytes(&u.to_string()),
-        },
+        Node::Number(value) => {
+            let mut ibuf = itoa::Buffer::new();
+            let mut fbuf = dtoa::Buffer::new();
+            match value {
+                Numeric::Integer(i) => destination.add_bytes(ibuf.format(*i)),
+                Numeric::UInteger(u) => destination.add_bytes(ibuf.format(*u)),
+                Numeric::Float(f) => destination.add_bytes(fbuf.format(*f)),
+                Numeric::Byte(b) => destination.add_bytes(ibuf.format(*b)),
+                Numeric::Int8(i) => destination.add_bytes(ibuf.format(*i)),
+                Numeric::Int16(i) => destination.add_bytes(ibuf.format(*i)),
+                Numeric::UInt16(u) => destination.add_bytes(ibuf.format(*u)),
+                Numeric::Int32(i) => destination.add_bytes(ibuf.format(*i)),
+                Numeric::UInt32(u) => destination.add_bytes(ibuf.format(*u)),
+            }
+        }
         // Handle string values with proper JSON escaping
-        Node::Str(value) => destination.add_bytes(&format!("\"{}\"", value)),
+        Node::Str(value) => {
+            destination.add_bytes("\"");
+            destination.add_bytes(value);
+            destination.add_bytes("\"");
+        }
         // Handle null values
         Node::None => destination.add_bytes("null"),
         // Handle arrays with proper indentation and formatting
         Node::Array(array) => {
             destination.add_bytes("[\n");
             for (i, item) in array.iter().enumerate() {
-                destination.add_bytes(&" ".repeat(current_indent + indent));
+                write_spaces(destination, current_indent + indent);
                 pretty_print(item, destination, indent, current_indent + indent);
                 if i < array.len() - 1 {
                     destination.add_bytes(",");
                 }
                 destination.add_bytes("\n");
             }
-            destination.add_bytes(&" ".repeat(current_indent));
+            write_spaces(destination, current_indent);
             destination.add_bytes("]");
         }
         // Handle objects/maps with proper indentation and key-value formatting
         Node::Object(map) => {
             destination.add_bytes("{\n");
             for (i, (key, value)) in map.iter().enumerate() {
-                destination.add_bytes(&" ".repeat(current_indent + indent));
-                destination.add_bytes(&format!("\"{}\"", key));
+                write_spaces(destination, current_indent + indent);
+                destination.add_bytes("\"");
+                destination.add_bytes(key);
+                destination.add_bytes("\"");
                 destination.add_bytes(": ");
                 pretty_print(value, destination, indent, current_indent + indent);
                 if i < map.len() - 1 {
@@ -76,7 +100,7 @@ fn pretty_print(
                 }
                 destination.add_bytes("\n");
             }
-            destination.add_bytes(&" ".repeat(current_indent));
+            write_spaces(destination, current_indent);
             destination.add_bytes("}");
         }
     }
@@ -98,13 +122,13 @@ pub fn strip(source: &mut dyn ISource, destination: &mut dyn IDestination) {
                     while source.more() && source.current() != Some('"') {
                         // Handle escaped characters
                         if source.current() == Some('\\') {
-                            destination.add_bytes(&source.current().unwrap().to_string());
+                            destination.add_byte(b'\\');
                             source.next();
                         }
                         destination.add_byte(source.current().unwrap() as u8);
                         source.next();
                     }
-                    destination.add_bytes(&source.current().unwrap().to_string());
+                    destination.add_byte(b'"');
                 }
             }
         }

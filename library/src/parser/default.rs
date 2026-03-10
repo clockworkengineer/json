@@ -128,7 +128,7 @@ fn parse_value(
 #[inline]
 fn skip_whitespace(source: &mut dyn ISource) {
     while let Some(c) = source.current() {
-        if !c.is_whitespace() {
+        if !is_json_whitespace(c) {
             break;
         }
         source.next();

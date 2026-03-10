@@ -60,18 +60,7 @@ impl Node {
 
     /// Creates a Node::Array from a slice, using SmallVec for small arrays.
     pub fn from_slice(slice: &[Node]) -> Self {
-        
-        let mut small: SmallVec<[Node; 8]> = SmallVec::new();
-        if slice.len() <= 8 {
-            // For small slices, use stack allocation and clone
-            for item in slice {
-                small.push(item.clone());
-            }
-            Node::Array(small.into_vec())
-        } else {
-            // For large slices, use Vec::from with clone
-            Node::Array(slice.to_vec())
-        }
+        Node::Array(slice.to_vec())
     }
 
     /// Creates a Node::Array from a Vec<Node> without cloning (zero-copy).
