@@ -1,6 +1,9 @@
 /// Shared string constants and escape utilities for JSON serialization
 pub mod escape;
 
+/// FormatEncoder and Serializer trait abstractions
+pub mod traits;
+
 /// Module for default JSON string formatting and serialization
 pub mod default;
 pub mod pretty;

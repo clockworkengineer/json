@@ -2,7 +2,13 @@
 #[cfg(feature = "json-pointer")]
 pub mod json_pointer;
 
+pub mod types;
+pub mod accessors;
+pub mod indexing;
+pub mod convert;
 pub mod node;
+
+pub use types::{Node, Numeric};
 
 /// JSON Schema validation (subset of Draft 7)
 #[cfg(feature = "alloc")]
