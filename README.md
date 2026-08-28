@@ -1,5 +1,7 @@
 # json_lib
 
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-yellow.svg)](https://buymeacoffee.com/roberttizz1)
+
 **Version 0.2.0** — A lightweight, modular JSON toolkit for Rust with pluggable I/O sources/destinations, a simple in-memory Node tree, multiple serializers (JSON, YAML, XML, Bencode, TOML), and `no_std` support. Designed for small binaries, predictable behavior, and easy embedding.
 
 - Core `Node` type representing JSON structures
@@ -409,5 +411,11 @@ This project is licensed under the terms of the LICENSE file included in the rep
 - Please format and lint your code before submitting
 
 ## Support
+
+If you find this project helpful, consider supporting its development:
+
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-yellow.svg)](https://buymeacoffee.com/roberttizz1)
+
+You can [Buy Me a Coffee](https://buymeacoffee.com/roberttizz1) to show your support!
 
 If you run into issues or have questions, please open an issue in the repository.
